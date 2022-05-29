@@ -1,15 +1,13 @@
 
 class validator():
     def __init__(self):
-        self.read_set = {}
-        self.write_set = {}
+        pass
 
-    def validate_transaction(self, t_j):
-        ongoing_transactions = []
+    def validate_transaction(self, t_j, ongoing_transactions):
         for t_i in ongoing_transactions:
-            if (self.read_set[t_j] & self.write_set[t_i]) :
+            if (t_j.read_set & t_i.write_set) :
                 return False
-            elif (self.write_set[t_j] & self.write_set[t_i]):
+            elif (t_j.write_set & t_i.write_set):
                 return False
         
         return True
