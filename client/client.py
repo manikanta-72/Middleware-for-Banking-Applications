@@ -53,7 +53,7 @@ class TransactionSerializer:
 
     # this part is serialized
     def validate_transaction_and_write(self, tx: Transaction) -> bool:
-        finished_before_tx: Set[Transaction] = set()
+        finished_before_tx: Set[int] = set()
         for t in self.finished_transactions:
             if self.transactions.get(t).finished_timestamp < tx.timestamp:
                 finished_before_tx.add(self.transactions.get(t).timestamp)
