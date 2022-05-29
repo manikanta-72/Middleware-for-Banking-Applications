@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from flask import Flask, render_template, request
 app = Flask(__name__)
 config_file = "config.json"
@@ -14,12 +13,6 @@ app.config["DEBUG"] = True
 def read(account_numbers):
     # return a dict of account number and balance along with current timestamp
     pass
-=======
-# # Handle Read
-# def read(account_numbers):
-#     # return a dict of account number and balance along with current timestamp
-#     pass
->>>>>>> 1aa9d78b107d071bcac049fe6fe56a447bbbab5e
 
 
 # # Handle COMMIT

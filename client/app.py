@@ -69,6 +69,9 @@ def create():
 
     return render_template('create.html')
 
+@app.route('/', methods=['GET'])
+def home():
+    return "<h1> Home page of Transaction Project"
 
 def main():
     app.run(host=IP, port=PORT)
