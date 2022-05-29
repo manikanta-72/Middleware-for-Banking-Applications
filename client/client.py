@@ -91,3 +91,14 @@ class TransactionSerializer:
             self.transactions.pop(tx.timestamp)
             self.validated_transactions.pop(tx.timestamp)
             return False
+
+
+executor = TransactionSerializer()
+
+
+def run_transaction(read_set: Set[int], write_dict: Dict[int, int]):
+    print(read_set)
+    print(write_dict)
+    t = TransactionSerializer.add_transaction(read_set, write_dict)
+    executor.start_transaction_read_phase(t)
+    executor.validate_transaction_and_write(t)

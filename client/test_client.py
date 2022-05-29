@@ -1,7 +1,7 @@
 # Client test
 import unittest
 
-from .client import TransactionSerializer
+from client import TransactionSerializer
 
 
 class TestClient(unittest.TestCase):
