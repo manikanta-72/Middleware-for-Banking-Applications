@@ -19,7 +19,7 @@ class Agent():
         
         for account_number, balance in write_set:
             # update the database with new values
-            self.update(account_number,balance)
+            self.update_account(account_number,balance)
             
             # write replication log with the latest transaction
             self.write_replication_log(transaction_id,account_number,balance)
