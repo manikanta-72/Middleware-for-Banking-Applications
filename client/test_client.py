@@ -36,4 +36,3 @@ class TestClient(unittest.TestCase):
 
         self.assertTrue(executor.validate_transaction_and_write(t1))
         self.assertTrue(executor.validate_transaction_and_write(t2))
-

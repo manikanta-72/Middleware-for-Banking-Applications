@@ -28,6 +28,7 @@ class Transaction:
 def commit_transaction(transaction: Transaction) -> bool:
     # call the agent with write set
     # TODO
+
     return True
 
 
@@ -49,6 +50,7 @@ class TransactionSerializer:
         # Note the current timestamp
         time_ns = time.time_ns()
         tx.set_timestamp(time_ns)
+        # TODO call agent for reads
         self.transactions[time_ns] = tx
 
     # this part is serialized
