@@ -25,8 +25,8 @@ def read():
 @app.route('/commit/', method=['POST'])
 def commit():
     json_data = request.get_json()
-    transaction_id = json_data['transaction_id']
-    write_set = json_data['write_set']
-    read_set = json_data[read_set]
-    commit_status = agent_instance.commit_transaction(transaction_id, write_set, read_set)
+    transaction = json_data['transaction']
+    # write_set = json_data['write_set']
+    # read_set = json_data[read_set]
+    commit_status = agent_instance.commit_transaction(transaction)
     return {'commit': commit_status}
