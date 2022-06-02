@@ -1,77 +1,74 @@
-from flask import Flask, render_template, request
-app = Flask(__name__)
-config_file = "config.json"
+import time
 
-with open(config_file, "r") as f:
-    server_configs = json.load(f)
-
-IP = server_configs["ip"]
-PORT = server_configs["port"]
-app.config["DEBUG"] = True
-
-# Handle Read
-def read(account_numbers):
-    # return a dict of account number and balance along with current timestamp
-    pass
+from transaction_validator import TransactionValidator
+import threading
 
 
-# # Handle COMMIT
-# def commit(read_account_numbers, write_account_numbers, read_timestamp, transaction_sno):
-#     pass
+class Agent:
+    def __init__(self):
+        self.pending_queue = {}
+        self.validator = TransactionValidator()
+        self.lock = threading.Lock()
 
-from flask import Flask
-from flask import request
-import json
+        # initialise the database instance
+        # create/init replication log
 
-def database_connect():
-	import psycopg2
-	conn = psycopg2.connect(database="test_db", user='postgres', password='', host='localhost', port='5432')
-	cursor = conn.cursor()
-	return cursor
+        pass
 
-app = Flask(__name__)
+    # We are going to use time in nanos for transaction id
+    def get_transaction_id(self):
+        # synchronized block to get the next transaction id.
+        self.lock.acquire()
+        time.sleep(0.0001)
+        tid = time.time_ns()
+        self.lock.release()
+        return tid
 
-@app.route('/read/', methods=['POST'])
-def index(cursor):
-	#print(request.read_set)
-	read_set_test = [{"acc_number": 1},{"acc_number": 2},{"acc_number": 3}]
-	#print(json.dumps(read_set_test))
-	for acc in read_set_test:
-		cursor.execute("select * from testdb where id={acc['acc_number']}")
-		print(acc['acc_number'])
-		result = cursor.fetchall()
-		print(result)
-	return 'Hello, Flask!'
+    def get_account_balances(self, account_numbers):
+        # return the balance of the account with account number(account_number) 
+        pass
 
-if __name__ == '__main__':
-	cursor = database_connect()
-	app.run(cursor, debug=True)
+    def update_account(self, account_number, balance):
+        # update the balance of the account with account number(account_number)
+        # append the log
+        pass
 
-'''
-[
-	{
-		"acc_number": 12345
-	},
-	{
-		"acc_number": 34567
-	},
-	{
-		"acc_number": 56789
-	}
-]
+    def get_timestamp(self, account_number):
+        # return the timestamp of the latest write with account number(account_number) 
+        pass
 
-[
-	{
-		"acc_number": 12345,
-		"balance": 5
-	},
-	{
-		"acc_number": 34567,
-		"balance": 5
-	},
-	{
-		"acc_number": 56789,
-		"balance": 5
-	}
-]
-'''
+    def update_timestamp(self, account_number, timestamp):
+        # update the timestamp of the account with account number
+        # append the log
+        pass
+
+    def commit_transaction(self, read_set, write_set):
+        # validate the commit ?
+        if self.validator.check_resource_availability(read_set, write_set):
+            # 2 options a. keep it in pending queue b. abort the transaction altogether
+            return "ABORT"
+
+        if self.validator.validate_transactions(read_set, write_set, self.database):
+            # return abort message as there is a conflict with another client service
+            return "ABORT"
+
+        self.validator.lock_resources(write_set)
+
+        # 2pc implementation
+
+        for account_number, balance in write_set:
+            timeStamp = 0
+            # update the database with new values
+            self.update_account(account_number, balance)
+            self.update_timestamp(account_number, timeStamp)
+
+            # write replication log with the latest transaction
+            self.write_replication_log(transaction["transaction_id"], account_number, balance)
+
+        self.validator.unlock_resources(transaction)
+
+        return True
+
+    def write_replication_log(self):
+        # TODO decide on format to write the replication log
+        pass

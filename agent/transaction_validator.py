@@ -1,9 +1,8 @@
-
 class TransactionValidator():
-    def __init__(self,):
+    def __init__(self, ):
         self.resource_locks = {}
         # self.database = database
-    
+
     def check_resource_availability(self, transaction):
         for resource, _ in transaction["write_set"]:
             if self.resource_locks[resource]:
@@ -17,12 +16,12 @@ class TransactionValidator():
             # abort the transaction as some other process has updated the database
             pass
 
-    def lock_resources(self,transaction):
+    def lock_resources(self, transaction):
         for resource, _ in transaction["write_set"]:
             self.resource_locks[resource] = 1
         return
 
-    def unlock_resources(self,transaction):
+    def unlock_resources(self, transaction):
         for resource, _ in transaction["write_set"]:
             self.resource_locks[resource] = 0
         return
