@@ -7,12 +7,20 @@ class Agent():
         # initialise the database instance
         # create/init replication log
         pass
+    
+    def get_account_balance(self, account_number):
+        # return the balance of the account with account number(account_number) 
+        pass
 
     def update_account(self, account_number, balance):
         # update the balance of the account with account number(account_number)
         # append the log
         pass
-    
+
+    def get_timestamp(self, account_number):
+        # return the timestamp of the latest write with account number(account_number) 
+        pass
+
     def update_timestamp(self, account_number, timestamp):
         # update the timestamp of the account with account number
         # append the log

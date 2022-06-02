@@ -1,0 +1,14 @@
+POST http://localhost:5000/read/
+Content-Type: 'application/json'
+
+[
+	{
+		"acc_number": 12345
+	},
+	{
+		"acc_number": 34567
+	},
+	{
+		"acc_number": 56789
+	}
+]
