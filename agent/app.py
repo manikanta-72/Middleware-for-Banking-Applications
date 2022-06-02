@@ -15,10 +15,15 @@ PORT = server_configs["port"]
 app.config["DEBUG"] = True
 
 @app.route('/read/', methods=['POST'])
+
+# APIs from client
 def read():
     json_data = request.get_json()
+    # read-set
     account_number = json_data['acc_num']
+    # validate for any ongoing commits
     account_balance = agent_instance.get_account_balance(account_number)
+    # need to return the timestamp of the resource
     return {'balance': account_balance}
 
 
@@ -30,3 +35,5 @@ def commit():
     # read_set = json_data[read_set]
     commit_status = agent_instance.commit_transaction(transaction)
     return {'commit': commit_status}
+
+# APIs from External source for clock synchronize and leader selection
