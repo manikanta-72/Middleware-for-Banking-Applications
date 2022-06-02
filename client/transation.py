@@ -1,5 +1,6 @@
 from typing import Dict, Set
 
+
 # Transaction class: save the details of a single transaction
 
 class Transaction:

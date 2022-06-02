@@ -2,9 +2,16 @@ import time
 from transation import Transaction
 
 from typing import Dict, Set
-import requests
 
 CLIENT_URL = ""
+
+
+def commit_transaction(transaction: Transaction) -> bool:
+    # call the agent with write set
+    # TODO
+
+    return True
+
 
 # OCC implementation in the client
 

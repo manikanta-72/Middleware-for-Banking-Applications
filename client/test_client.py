@@ -1,4 +1,5 @@
 # Client test
+import time
 import unittest
 
 from client import TransactionSerializer
@@ -16,6 +17,7 @@ class TestClient(unittest.TestCase):
         t2 = TransactionSerializer.add_transaction(t2_read_set, t2_write_dict)
 
         executor.start_transaction_read_phase(t1)
+        time.sleep(0.05)
         executor.start_transaction_read_phase(t2)
 
         self.assertTrue(executor.validate_transaction_and_write(t1))
@@ -32,6 +34,7 @@ class TestClient(unittest.TestCase):
         t2 = TransactionSerializer.add_transaction(t2_read_set, t2_write_dict)
 
         executor.start_transaction_read_phase(t1)
+        time.sleep(0.05)
         executor.start_transaction_read_phase(t2)
 
         self.assertTrue(executor.validate_transaction_and_write(t1))

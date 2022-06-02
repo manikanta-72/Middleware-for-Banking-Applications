@@ -27,8 +27,8 @@ def parse_reads_and_writes(content: str) -> (Set, Dict):
     i = 0
     while i < content_length:
         if content[i] == 'r':
-            begin = i+2
-            end = i+2
+            begin = i + 2
+            end = i + 2
             while content[end] != ')':
                 end += 1
             read_set.add(int(content[begin:end]))
@@ -69,9 +69,11 @@ def create():
 
     return render_template('create.html')
 
+
 @app.route('/', methods=['GET'])
 def home():
     return "<h1> Home page of Transaction Project"
+
 
 def main():
     app.run(host=IP, port=PORT)
