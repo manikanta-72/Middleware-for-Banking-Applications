@@ -2,6 +2,9 @@ import time
 from transation import Transaction
 
 from typing import Dict, Set
+import requests
+
+CLIENT_URL = ""
 
 # OCC implementation in the client
 
@@ -13,6 +16,7 @@ class TransactionSerializer:
         self.transactions: Dict[int, Transaction] = {}
         self.validated_transactions: Dict[int, Transaction] = {}
         self.finished_transactions: Set[int] = set()
+        self.url = CLIENT_URL
 
     @staticmethod
     def add_transaction(read_set, write_dict) -> Transaction:
@@ -26,6 +30,7 @@ class TransactionSerializer:
         time_ns = time.time_ns()
         tx.set_timestamp(time_ns)
         # TODO call agent for reads
+
         self.transactions[time_ns] = tx
 
     # this part is serialized
