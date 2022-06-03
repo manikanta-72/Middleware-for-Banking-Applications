@@ -1,5 +1,6 @@
 import time
 from transation import Transaction
+import threading
 
 from typing import Dict, Set
 
@@ -24,6 +25,7 @@ class TransactionSerializer:
         self.validated_transactions: Dict[int, Transaction] = {}
         self.finished_transactions: Set[int] = set()
         self.url = CLIENT_URL
+        self.lock = threading.Lock()
 
     @staticmethod
     def add_transaction(read_set, write_dict) -> Transaction:
@@ -32,16 +34,21 @@ class TransactionSerializer:
         t.set_writes(write_dict)
         return t
 
+    # Use the time nanos for the transaction id
     def start_transaction_read_phase(self, tx: Transaction) -> None:
         # Note the current timestamp
+        self.lock.acquire()
+        time.sleep(0.0001)
         time_ns = time.time_ns()
+        self.lock.release()
         tx.set_timestamp(time_ns)
         # TODO call agent for reads
 
         self.transactions[time_ns] = tx
 
-    # this part is serialized
+    # this part is serialized/synchronized
     def validate_transaction_and_write(self, tx: Transaction) -> bool:
+        self.lock.acquire()
         finished_before_tx: Set[int] = set()
         for t in self.finished_transactions:
             if self.transactions.get(t).finished_timestamp < tx.timestamp:
@@ -55,6 +62,7 @@ class TransactionSerializer:
         for t in filtered_txs:
             # if current tx read set overlaps with t's write set return false
             if not t.write_buffer.keys().isdisjoint(tx.read_set):
+                self.lock.release()
                 return False
 
         for ftx in self.finished_transactions:
@@ -63,6 +71,7 @@ class TransactionSerializer:
         for t in filtered_txs:
             # if current tx write set overlaps with t's write set return false
             if not t.write_buffer.keys().isdisjoint(tx.write_buffer.keys()):
+                self.lock.release()
                 return False
 
         # Add the transaction to the validated dict
@@ -75,8 +84,10 @@ class TransactionSerializer:
         if result:
             self.finished_transactions.add(tx.timestamp)
             tx.finished_timestamp = time.time_ns()
+            self.lock.release()
             return True
         else:
             self.transactions.pop(tx.timestamp)
             self.validated_transactions.pop(tx.timestamp)
+            self.lock.release()
             return False
