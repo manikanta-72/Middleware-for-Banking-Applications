@@ -1,5 +1,7 @@
 import time
 
+import psycopg2
+
 from transaction_validator import TransactionValidator
 import threading
 
@@ -9,11 +11,33 @@ class Agent:
         self.pending_queue = {}
         self.validator = TransactionValidator()
         self.lock = threading.Lock()
+        self.conn = None
 
-        # initialise the database instance
-        # create/init replication log
+        try:
+            # initialise the database instance
+            conn = psycopg2.connect(
+                host="localhost",
+                database="postgres",
+                user="postgres",
+                password="dbpassword",
+                port="5432")
 
-        pass
+            create_bank_balance_table = """
+            CREATE TABLE IF NOT EXISTS bank_balance (
+                account_number INTEGER NOT NULL,
+                balance INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT now(),
+                updated_at TIMESTAMP DEFAULT now(),
+                PRIMARY KEY (account_number)
+            );
+            """
+
+            with self.conn:
+                with conn.cursor() as cur:
+                    cur.execute(create_bank_balance_table)
+
+        except Exception as e:
+            print(str(e))
 
     # We are going to use time in nanos for transaction id
     def get_transaction_id(self):
@@ -25,8 +49,19 @@ class Agent:
         return tid
 
     def get_account_balances(self, account_numbers):
-        # return the balance of the account with account number(account_number) 
-        pass
+        # return the balances
+
+        get_balances = """
+        SELECT account_number, balance FROM bank_balance
+        WHERE account_number IN (%s);
+        """
+
+        try:
+            with self.conn:
+                with self.conn.cursor() as cur:
+                    cur.execute(get_balances, list(account_numbers))
+        except Exception as e:
+            print(str(e))
 
     def update_account(self, account_number, balance):
         # update the balance of the account with account number(account_number)

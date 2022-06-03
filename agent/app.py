@@ -19,7 +19,7 @@ app.config["DEBUG"] = True
 # APIs from client
 def read():
     json_data = request.get_json()
-    # read-set
+    # read-set -- list of account numbers
     account_numbers = json_data['acc_nums']
     # validate for any ongoing commits
     account_balances = agent_instance.get_account_balances(account_numbers)
