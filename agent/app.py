@@ -9,12 +9,12 @@ config_file = "config.json"
 with open(config_file, "r") as f:
     server_configs = json.load(f)
 
-agent_instance = Agent()
-
 IP = server_configs["ip"]
 PORT = server_configs["port"]
 app.config["DEBUG"] = True
 
+url = "https://" + IP 
+agent_instance = Agent(url, PORT)
 
 @app.route('/read/', methods=['POST'])
 # APIs from client
