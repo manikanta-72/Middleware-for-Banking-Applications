@@ -1,5 +1,5 @@
 import time
-
+import requests
 import psycopg2
 
 from transaction_validator import TransactionValidator
@@ -7,12 +7,13 @@ import threading
 
 
 class Agent:
-    def __init__(self):
+    def __init__(self, url, port):
         self.pending_queue = {}
         self.validator = TransactionValidator()
         self.lock = threading.Lock()
         self.conn = None
-
+        self.URL = url
+        self.PORT = port
         try:
             # initialise the database instance
             conn = psycopg2.connect(
@@ -87,21 +88,66 @@ class Agent:
         # append the log
         pass
 
-    def commit_transaction(self, read_set, write_set, read_time):
+    def read_transaction(self, transaction):
+        '''
+        Input: 
+            transaction: Transaction - sent by client
+        Output: 
+            read_status: True/False - whether read can be done successfully or not
+            return_data: list of balances wrt to input account numbers
+        '''
+        if not self.validator.check_resource_availability(transaction):
+            return False, []
+        
+        return True, self.get_account_balances(transaction['read_set'])
+
+    def prepare_for_commit(self, write_set):
+        if not self.validator.check_resource_availability({'write_set': write_set}):
+            return "NO"
+        
+        self.validator.lock_resources({'write_set' : write_set})
+
+        return "YES"
+
+    def log_commit_transaction(self, write_set):
+        pass
+
+    # def commit_transaction(self, read_set, write_set, read_time):
+    def commit_transaction(self, transaction):
+        '''
+        Input:
+            transaction: Transaction sent by client
+        Output:
+            commit_status: "COMMIT"/"ABORT" 
+        '''
         # validate the commit ?
-        if self.validator.check_resource_availability(read_set, write_set):
+        # if self.validator.check_resource_availability(read_set, write_set):
+        if self.validator.check_resource_availability(transaction):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
             return "ABORT"
 
-        if self.validator.validate_transactions(read_set, write_set, self.database):
+        # if self.validator.validate_transactions(read_set, write_set, self.database):
+        if self.validator.validate_transactions(transaction, self.database):
             # return abort message as there is a conflict with another client service
             return "ABORT"
 
-        self.validator.lock_resources(write_set)
+        # self.validator.lock_resources(write_set)
+        self.validator.lock_resources(transaction)
 
         # 2pc implementation
+        for i in range(1,3):
+            if not self.send_prepare_message(self.PORT+i, transaction['write_set']):
+                return "ABORT"
 
-        for account_number, balance in write_set:
+        # prepared received
+
+        # commit message to followers
+        for i in range(1,3):
+            if not self.send_commit_message(self.PORT+i, transaction['write_set']):
+                return "ABORT"
+        # commit acknowledge
+
+        for account_number, balance in transaction['write_set']:
             timeStamp = 0
             # update the database with new values
             self.update_account(account_number, balance)
@@ -112,8 +158,30 @@ class Agent:
 
         self.validator.unlock_resources(transaction)
 
-        return True
+        return "COMMIT"
 
     def write_replication_log(self):
         # TODO decide on format to write the replication log
         pass
+    
+    def send_prepare_message(self,port, write_set):
+        # requests timeout
+        url = self.URL + ':' + port + '/prepare_message/'
+        r = requests.post(url, data={'write_set': write_set}, timeout=5)
+        if r.status_code is not 200:
+            return False
+        r_json = r.json()
+        if r_json['prepare_status'] is not "YES":
+            return False
+        return True
+
+    def send_commit_message(self,port, write_set):
+        # requests timeout
+        url = self.URL + ':' + port + '/commit_message/'
+        r = requests.post(url, data={'write_set': write_set}, timeout=5)
+        if r.status_code is not 200:
+            return False
+        r_json = r.json()
+        if r_json['commit_status'] is not "YES":
+            return False
+        return True

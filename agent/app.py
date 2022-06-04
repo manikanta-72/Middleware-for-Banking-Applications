@@ -1,6 +1,7 @@
 from flask import Flask, request
 import json
 from agent import Agent
+from client.transation import Transaction
 
 app = Flask(__name__)
 config_file = "config.json"
@@ -20,22 +21,38 @@ app.config["DEBUG"] = True
 def read():
     json_data = request.get_json()
     # read-set -- list of account numbers
-    account_numbers = json_data['acc_nums']
+    transaction = json_data['transaction']
     # validate for any ongoing commits
-    account_balances = agent_instance.get_account_balances(account_numbers)
+    status, return_data = agent_instance.read_transaction(transaction)
     # need to return the timestamp of the resource
-    return {'balance': account_balances}
+    return {'read_status': status, 'data': return_data}
 
 
 @app.route('/commit/', method=['POST'])
 def commit():
     json_data = request.get_json()
-    write_set = json_data['write_set']
-    read_set = json_data['read_set']
-    read_time = json_data['read_time']
-    commit_status = agent_instance.commit_transaction(read_set, write_set, read_time)
+    # write_set = json_data['write_set']
+    # read_set = json_data['read_set']
+    # read_time = json_data['read_time']
+    transaction = json_data['transaction']
+    # commit_status = agent_instance.commit_transaction(read_set, write_set, read_time)
+    commit_status = agent_instance.commit_transaction(transaction)
     return {'commit': commit_status}
 
+@app.route('/commit_message/', method=['POST'])
+def commit_message():
+    json_data = request.get_json()
+    write_set = json_data['write-set']
+    status = agent_instance.log_commit_transaction(write_set)
+    return {'commit_status' : "YES"}
+
+
+@app.route('/prepare_message/', method=['POST'])
+def prepare_message():
+    json_data = request.get_json()
+    write_set = json_data['write_set']
+    status = agent_instance.prepare_for_commit(write_set)
+    return {'prepare_status' : status}
 
 # APIs from External source for clock synchronize and leader selection
 
