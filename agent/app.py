@@ -32,7 +32,8 @@ def commit():
     json_data = request.get_json()
     write_set = json_data['write_set']
     read_set = json_data['read_set']
-    commit_status = agent_instance.commit_transaction(read_set, write_set)
+    read_time = json_data['read_time']
+    commit_status = agent_instance.commit_transaction(read_set, write_set, read_time)
     return {'commit': commit_status}
 
 

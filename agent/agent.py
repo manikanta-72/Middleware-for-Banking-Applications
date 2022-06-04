@@ -57,9 +57,19 @@ class Agent:
         """
 
         try:
+            balances = []
+            curr_time = time.time_ns()
             with self.conn:
                 with self.conn.cursor() as cur:
                     cur.execute(get_balances, list(account_numbers))
+                    row = cur.fetchone()
+                    while row is not None:
+                        print(row)
+                        balances.append([row, curr_time])
+                        row = cur.fetchone()
+
+            return balances
+
         except Exception as e:
             print(str(e))
 
@@ -77,7 +87,7 @@ class Agent:
         # append the log
         pass
 
-    def commit_transaction(self, read_set, write_set):
+    def commit_transaction(self, read_set, write_set, read_time):
         # validate the commit ?
         if self.validator.check_resource_availability(read_set, write_set):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
