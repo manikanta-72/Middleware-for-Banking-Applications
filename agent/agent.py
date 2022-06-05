@@ -127,7 +127,7 @@ class Agent:
             return "ABORT"
 
         # if self.validator.validate_transactions(read_set, write_set, self.database):
-        if self.validator.validate_transactions(transaction, self.database):
+        if self.validator.validate_transactions(transaction, self.get_timestamp):
             # return abort message as there is a conflict with another client service
             return "ABORT"
 
