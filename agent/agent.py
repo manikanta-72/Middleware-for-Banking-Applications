@@ -122,6 +122,9 @@ class Agent:
         return "YES"
 
     def log_commit_transaction(self, transaction):
+        log_message = "{}$$COMMIT".format(transaction['transaction_id'])
+        self.write_log(log_message)
+
         for account_number, balance in transaction['write_set']:
             timeStamp = 0
             # update the database with new values
