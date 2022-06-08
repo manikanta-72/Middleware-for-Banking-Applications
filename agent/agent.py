@@ -97,9 +97,10 @@ class Agent:
             read_status: True/False - whether read can be done successfully or not
             return_data: list of balances wrt to input account numbers
         '''
-        if not self.validator.check_resource_availability(transaction):
+        if not self.validator.check_resource_availability(transaction, 0):
             return False, []
         
+        # return the current timestamp
         return True, self.get_account_balances(transaction['read_set'])
 
     def prepare_for_commit(self, transaction):
@@ -143,7 +144,7 @@ class Agent:
         self.write_log(log_message)
         # validate the commit ?
         # if self.validator.check_resource_availability(read_set, write_set):
-        if self.validator.check_resource_availability(transaction):
+        if self.validator.check_resource_availability(transaction, 1):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
             self.write_log(log_message)

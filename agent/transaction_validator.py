@@ -2,10 +2,16 @@ class TransactionValidator():
     def __init__(self, ):
         self.resource_locks = {}
 
-    def check_resource_availability(self, transaction):
-        for resource, _ in transaction["write_set"]:
-            if self.resource_locks[resource]:
-                return False
+    # need to check different values for different operations 
+    def check_resource_availability(self, transaction, WRITE):
+        if WRITE:
+            for resource, _ in transaction["write_set"]:
+                if self.resource_locks[resource]:
+                    return False
+        else:
+            for resource in transaction["read_set"]:
+                if self.resource_locks[resource]:
+                    return False
         return True
 
     def validate_transactions(self, transaction, get_timestamp):
