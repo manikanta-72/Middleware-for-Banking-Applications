@@ -76,18 +76,25 @@ class Agent:
             print(str(e))
 
     def update_account(self, account_number, balance):
-        # update the balance of the account with account number(account_number)
-        # append the log
-        pass
+        # update the balance of the account and write current timestamp for an account number
+        sql_query = """UPDATE bank_balance SET balance = (%s), updated_at = (%s) WHERE account_number = (%s);"""
+        try:
+            # execute the UPDATE query
+            self.conn.cursor().execute(sql_query, balance, time.time_ns(), account_number)
+            self.conn.commit()
+        except Exception as e:
+            print(str(e))
 
     def get_timestamp(self, account_number):
-        # return the timestamp of the latest write with account number(account_number) 
-        pass
-
-    def update_timestamp(self, account_number, timestamp):
-        # update the timestamp of the account with account number
-        # append the log
-        pass
+        # return the timestamp of the latest write of an account number
+        sql_query = """SELECT updated_at FROM bank_balance WHERE account_number = (%s);"""
+        try:
+            # execute the UPDATE query
+            self.conn.cursor().execute(sql_query, account_number)
+            ts = self.conn.cursor().fetchone()
+            return ts
+        except Exception as e:
+            print(str(e))
 
     def read_transaction(self, transaction):
         '''
