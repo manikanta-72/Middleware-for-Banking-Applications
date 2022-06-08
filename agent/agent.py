@@ -14,6 +14,7 @@ class Agent:
         self.conn = None
         self.URL = url
         self.PORT = port
+        self.log_path = "recovery_log.txt"
         try:
             # initialise the database instance
             conn = psycopg2.connect(
@@ -120,6 +121,8 @@ class Agent:
         Output:
             commit_status: "COMMIT"/"ABORT" 
         '''
+        log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
+        self.write_log(log_message)
         # validate the commit ?
         # if self.validator.check_resource_availability(read_set, write_set):
         if self.validator.check_resource_availability(transaction):
@@ -134,12 +137,20 @@ class Agent:
         # self.validator.lock_resources(write_set)
         self.validator.lock_resources(transaction)
 
+        log_message = "{}$$PREPARED".format(transaction['transaction_id'])
+        self.write_log(log_message)
+
         # 2pc implementation
         for i in range(1,3):
             if not self.send_prepare_message(self.PORT+i, transaction['write_set']):
+                log_message = "{}$$ABORT".format(transaction['transaction_id'])
+                self.write_log(log_message)
                 return "ABORT"
 
         # prepared received
+
+        log_message = "{}$$COMMIT".format(transaction['transaction_id'])
+        self.write_log(log_message)
 
         # commit message to followers
         for i in range(1,3):
@@ -157,12 +168,17 @@ class Agent:
             self.write_replication_log(transaction["transaction_id"], account_number, balance)
 
         self.validator.unlock_resources(transaction)
+        
+        log_message = "{}$$COMPLETED".format(transaction['transaction_id'])
+        self.write_log(log_message)
 
         return "COMMIT"
 
-    def write_replication_log(self):
+    def write_log(self, message):
         # TODO decide on format to write the replication log
-        pass
+        with open(self.log_path, 'w') as f:
+            f.write(message + '\n')
+            
     
     def send_prepare_message(self,port, write_set):
         # requests timeout
