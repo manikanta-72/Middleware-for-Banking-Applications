@@ -14,7 +14,7 @@ class Agent:
         self.conn = None
         self.URL = url
         self.PORT = port
-        self.log_path = "recovery_log.txt"
+        self.log_file_path = "recovery_log.txt"
         try:
             # initialise the database instance
             conn = psycopg2.connect(
@@ -102,16 +102,34 @@ class Agent:
         
         return True, self.get_account_balances(transaction['read_set'])
 
-    def prepare_for_commit(self, write_set):
-        if not self.validator.check_resource_availability({'write_set': write_set}):
+    def prepare_for_commit(self, transaction):
+        if not self.validator.check_resource_availability(transaction):
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
             return "NO"
         
-        self.validator.lock_resources({'write_set' : write_set})
+        self.validator.lock_resources(transaction)
+        log_message = "{}$$PREPARED".format(transaction['transaction_id'])
+        self.write_log(log_message)
+        return "YES"
+
+    def log_commit_transaction(self, transaction):
+        for account_number, balance in transaction['write_set']:
+            timeStamp = 0
+            # update the database with new values
+            self.update_account(account_number, balance)
+            self.update_timestamp(account_number, timeStamp)
+
+            # write replication log with the latest transaction
+            self.write_replication_log(transaction["transaction_id"], account_number, balance)
+
+        self.validator.unlock_resources(transaction)
+        
+        log_message = "{}$$COMPLETED".format(transaction['transaction_id'])
+        self.write_log(log_message)
 
         return "YES"
 
-    def log_commit_transaction(self, write_set):
-        pass
 
     # def commit_transaction(self, read_set, write_set, read_time):
     def commit_transaction(self, transaction):
@@ -127,11 +145,15 @@ class Agent:
         # if self.validator.check_resource_availability(read_set, write_set):
         if self.validator.check_resource_availability(transaction):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
             return "ABORT"
 
         # if self.validator.validate_transactions(read_set, write_set, self.database):
         if self.validator.validate_transactions(transaction, self.get_timestamp):
             # return abort message as there is a conflict with another client service
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
             return "ABORT"
 
         # self.validator.lock_resources(write_set)
@@ -142,7 +164,7 @@ class Agent:
 
         # 2pc implementation
         for i in range(1,3):
-            if not self.send_prepare_message(self.PORT+i, transaction['write_set']):
+            if not self.send_prepare_message(self.PORT+i, transaction):
                 log_message = "{}$$ABORT".format(transaction['transaction_id'])
                 self.write_log(log_message)
                 return "ABORT"
@@ -154,7 +176,7 @@ class Agent:
 
         # commit message to followers
         for i in range(1,3):
-            if not self.send_commit_message(self.PORT+i, transaction['write_set']):
+            if not self.send_commit_message(self.PORT+i, transaction):
                 return "ABORT"
         # commit acknowledge
 
@@ -176,14 +198,14 @@ class Agent:
 
     def write_log(self, message):
         # TODO decide on format to write the replication log
-        with open(self.log_path, 'w') as f:
+        with open(self.log_file_path, 'w') as f:
             f.write(message + '\n')
             
     
-    def send_prepare_message(self,port, write_set):
+    def send_prepare_message(self,port, transaction):
         # requests timeout
         url = self.URL + ':' + port + '/prepare_message/'
-        r = requests.post(url, data={'write_set': write_set}, timeout=5)
+        r = requests.post(url, data={'transaction': transaction}, timeout=5)
         if r.status_code is not 200:
             return False
         r_json = r.json()
@@ -191,10 +213,10 @@ class Agent:
             return False
         return True
 
-    def send_commit_message(self,port, write_set):
+    def send_commit_message(self,port, transaction):
         # requests timeout
         url = self.URL + ':' + port + '/commit_message/'
-        r = requests.post(url, data={'write_set': write_set}, timeout=5)
+        r = requests.post(url, data={'transaction': transaction}, timeout=5)
         if r.status_code is not 200:
             return False
         r_json = r.json()

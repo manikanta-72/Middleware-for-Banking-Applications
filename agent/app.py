@@ -44,7 +44,7 @@ def commit_message():
     json_data = request.get_json()
     write_set = json_data['write-set']
     status = agent_instance.log_commit_transaction(write_set)
-    return {'commit_status' : "YES"}
+    return {'commit_status' : status}
 
 
 @app.route('/prepare_message/', method=['POST'])
@@ -56,6 +56,12 @@ def prepare_message():
 
 # APIs from External source for clock synchronize and leader selection
 
+@app.route('/become_leader/', method=['GET'])
+def become_leader():
+    json_data = request.get_json()
+    if json_data['leader']:
+        agent_instance.become_leader()
+    return {'response':'OK'}
 
 def main():
     app.run(host=IP, port=PORT)
