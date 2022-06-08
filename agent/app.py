@@ -56,7 +56,11 @@ def prepare_message():
 
 # APIs from External source for clock synchronize and leader selection
 
-@app.route('/become_leader/', method=['GET'])
+@app.route('/poll/', method=['POST'])
+def poll():
+    return {'response':'OK'}
+
+@app.route('/become_leader/', method=['POST'])
 def become_leader():
     json_data = request.get_json()
     if json_data['leader']:
