@@ -7,6 +7,7 @@ class Service:
         self.URL = url
         self.number_of_nodes = 3
         self.node_ports = [8000, 8001, 8002]
+        self.client_ports = [5000, 5001, 5002]
         self.current_leader = 8000
 
     def polling(self):
@@ -19,15 +20,21 @@ class Service:
             else:
                 old_leader = self.current_leader
                 self.current_leader = (self.current_leader+1) % self.number_of_nodes
-                api_call = self.URL + ':' + str(self.current_leader) + '/become_leader/'
-                # post request to set next leader
-                r = requests.post(api_call, data={'leader': self.current_leader})
-                # TODO: send a notification to clients about the new leader
+
                 for node in self.node_ports:
                     if node != self.current_leader and node != old_leader:
                         # sending notification to other participants about the leader change
                         api_call = self.URL + ':' + str(node) + '/leader_changed/'
                         r = requests.post(api_call, data={'leader': self.current_leader})
+
+                api_call = self.URL + ':' + str(self.current_leader) + '/become_leader/'
+                # post request to set next leader
+                r = requests.post(api_call, data={'leader': self.current_leader})
+                # send a notification to clients to send transactions to new leader
+                if r.status_code == 200:
+                    for node in self.client_ports:
+                        client_api_call = self.URL + ':' + str(node) + '/leader_changed/'
+                        c = requests.post(client_api_call, data={'leader': self.current_leader})
 
     def node_recover(self, port):
         while True:

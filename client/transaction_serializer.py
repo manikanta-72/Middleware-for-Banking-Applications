@@ -3,7 +3,7 @@ import time
 from transation import Transaction
 import threading
 import requests
-
+from client import current_leader
 from typing import Dict, Set
 
 CLIENT_URL = ""
@@ -13,7 +13,7 @@ def commit_transaction(tx: Transaction) -> bool:
     # call the agent with write set
     # TODO. Keep a timeout
 
-    url = "http://127.0.0.1" + ':' + str(8000) + '/commit/'
+    url = "http://127.0.0.1" + ':' + str(current_leader) + '/commit/'
     r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer, 'time_stamp': tx.read_timestamp}})
 
     print("Response for commit is:", r.json())
