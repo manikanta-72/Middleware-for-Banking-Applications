@@ -15,14 +15,17 @@ class Agent:
         self.URL = url
         self.PORT = port
         self.log_file_path = "recovery_log.txt"
+        print("XYAZZZ")
         try:
             # initialise the database instance
             conn = psycopg2.connect(
                 host="localhost",
                 database="postgres",
                 user="postgres",
-                password="dbpassword",
+                password="DB1",
                 port="5432")
+
+            conn.autocommit = True
 
             create_bank_balance_table = """
             CREATE TABLE IF NOT EXISTS bank_balance (
@@ -34,9 +37,9 @@ class Agent:
             );
             """
 
-            with self.conn:
-                with conn.cursor() as cur:
-                    cur.execute(create_bank_balance_table)
+            cursor = conn.cursor()
+            cursor.execute(create_bank_balance_table)
+            conn.commit()
 
         except Exception as e:
             print(str(e))
@@ -215,10 +218,10 @@ class Agent:
         # requests timeout
         url = self.URL + ':' + port + '/prepare_message/'
         r = requests.post(url, data={'transaction': transaction}, timeout=5)
-        if r.status_code is not 200:
+        if r.status_code != 200:
             return False
         r_json = r.json()
-        if r_json['prepare_status'] is not "YES":
+        if r_json['prepare_status'] != "YES":
             return False
         return True
 
@@ -226,9 +229,9 @@ class Agent:
         # requests timeout
         url = self.URL + ':' + port + '/commit_message/'
         r = requests.post(url, data={'transaction': transaction}, timeout=5)
-        if r.status_code is not 200:
+        if r.status_code != 200:
             return False
         r_json = r.json()
-        if r_json['commit_status'] is not "YES":
+        if r_json['commit_status'] != "YES":
             return False
         return True

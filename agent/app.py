@@ -17,19 +17,22 @@ url = "https://" + IP
 agent_instance = Agent(url, PORT)
 
 
-@app.route('/read/', methods=['POST'])
 # APIs from client
+@app.route('/read/', methods=['POST'])
 def read():
+    print("Received READ: XXXX")
     json_data = request.get_json()
+    print(request.form)
     # read-set -- list of account numbers
     transaction = json_data['transaction']
     # validate for any ongoing commits
+    print("Received READ: ", transaction)
     status, return_data = agent_instance.read_transaction(transaction)
     # need to return the timestamp of the resource
     return {'read_status': status, 'data': return_data}
 
 
-@app.route('/commit/', method=['POST'])
+@app.route('/commit/', methods=['POST'])
 def commit():
     json_data = request.get_json()
     # write_set = json_data['write_set']
@@ -41,7 +44,7 @@ def commit():
     return {'commit': commit_status}
 
 
-@app.route('/commit_message/', method=['POST'])
+@app.route('/commit_message/', methods=['POST'])
 def commit_message():
     json_data = request.get_json()
     write_set = json_data['write-set']
@@ -49,7 +52,7 @@ def commit_message():
     return {'commit_status': status}
 
 
-@app.route('/prepare_message/', method=['POST'])
+@app.route('/prepare_message/', methods=['POST'])
 def prepare_message():
     json_data = request.get_json()
     write_set = json_data['write_set']
@@ -59,12 +62,12 @@ def prepare_message():
 
 # APIs from External source for clock synchronize and leader selection
 
-@app.route('/poll/', method=['POST'])
+@app.route('/poll/', methods=['POST'])
 def poll():
     return {'response': 'OK'}
 
 
-@app.route('/become_leader/', method=['POST'])
+@app.route('/become_leader/', methods=['POST'])
 def become_leader():
     json_data = request.get_json()
     if json_data['leader']:

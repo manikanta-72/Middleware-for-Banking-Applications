@@ -18,7 +18,7 @@ docker rm DB2
 docker rm DB3
 
 docker run --name DB1 --rm  \
-  -e POSTGRES_PASSWORD=dbpassword -p 5432:5432  \
+  -e POSTGRES_PASSWORD=DB1 -p 5432:5432  \
   -v data1:/var/lib/postgresql/data \
   -v data1_replicationlog:/replication \
   -d postgres-with-python:v1

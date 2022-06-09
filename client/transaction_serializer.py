@@ -1,6 +1,8 @@
+import json
 import time
 from transation import Transaction
 import threading
+import requests
 
 from typing import Dict, Set
 
@@ -43,6 +45,12 @@ class TransactionSerializer:
         self.lock.release()
         tx.set_timestamp(time_ns)
         # TODO call agent for reads. Add timeout
+
+        url = "http://127.0.0.1" + ':' + str(8000) + '/read/'
+        print("Agent URL: ", url)
+        r = requests.post(url, json={'transaction': {'read_set': tx.read_set, 'write_set': tx.write_buffer}})
+
+        print("Response for read is:", r.json())
 
         self.transactions[time_ns] = tx
 
