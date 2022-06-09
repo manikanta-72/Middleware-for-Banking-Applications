@@ -9,7 +9,7 @@ CLIENT_URL = ""
 
 def commit_transaction(transaction: Transaction) -> bool:
     # call the agent with write set
-    # TODO
+    # TODO. Keep a timeout
 
     return True
 
@@ -42,7 +42,7 @@ class TransactionSerializer:
         time_ns = time.time_ns()
         self.lock.release()
         tx.set_timestamp(time_ns)
-        # TODO call agent for reads
+        # TODO call agent for reads. Add timeout
 
         self.transactions[time_ns] = tx
 

@@ -28,8 +28,8 @@ class Agent:
             CREATE TABLE IF NOT EXISTS bank_balance (
                 account_number INTEGER NOT NULL,
                 balance INTEGER NOT NULL,
-                created_at TIMESTAMP DEFAULT now(),
-                updated_at TIMESTAMP DEFAULT now(),
+                created_at BIGINT,
+                updated_at BIGINT,
                 PRIMARY KEY (account_number)
             );
             """
@@ -77,7 +77,7 @@ class Agent:
 
     def update_account(self, account_number, balance):
         # update the balance of the account and write current timestamp for an account number
-        sql_query = """UPDATE bank_balance SET balance = (%s), updated_at = (%s) WHERE account_number = (%s);"""
+        sql_query = """UPDATE bank_balance SET balance = %s, updated_at = %s WHERE account_number = %s;"""
         try:
             # execute the UPDATE query
             self.conn.cursor().execute(sql_query, balance, time.time_ns(), account_number)
@@ -87,7 +87,7 @@ class Agent:
 
     def get_timestamp(self, account_number):
         # return the timestamp of the latest write of an account number
-        sql_query = """SELECT updated_at FROM bank_balance WHERE account_number = (%s);"""
+        sql_query = """SELECT updated_at FROM bank_balance WHERE account_number = %s;"""
         try:
             # execute the UPDATE query
             self.conn.cursor().execute(sql_query, account_number)
@@ -106,7 +106,7 @@ class Agent:
         '''
         if not self.validator.check_resource_availability(transaction, 0):
             return False, []
-        
+
         # return the current timestamp
         return True, self.get_account_balances(transaction['read_set'])
 
@@ -115,7 +115,7 @@ class Agent:
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
             self.write_log(log_message)
             return "NO"
-        
+
         self.validator.lock_resources(transaction)
         log_message = "{}$$PREPARED".format(transaction['transaction_id'])
         self.write_log(log_message)
@@ -126,21 +126,15 @@ class Agent:
         self.write_log(log_message)
 
         for account_number, balance in transaction['write_set']:
-            timeStamp = 0
             # update the database with new values
             self.update_account(account_number, balance)
-            self.update_timestamp(account_number, timeStamp)
-
-            # write replication log with the latest transaction
-            self.write_replication_log(transaction["transaction_id"], account_number, balance)
 
         self.validator.unlock_resources(transaction)
-        
+
         log_message = "{}$$COMPLETED".format(transaction['transaction_id'])
         self.write_log(log_message)
 
         return "YES"
-
 
     # def commit_transaction(self, read_set, write_set, read_time):
     def commit_transaction(self, transaction):
@@ -150,44 +144,53 @@ class Agent:
         Output:
             commit_status: "COMMIT"/"ABORT" 
         '''
-        log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
-        self.write_log(log_message)
+        transaction['transaction_id'] = self.get_transaction_id()
+
         # validate the commit ?
         # if self.validator.check_resource_availability(read_set, write_set):
         if self.validator.check_resource_availability(transaction, 1):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
-            log_message = "{}$$ABORT".format(transaction['transaction_id'])
-            self.write_log(log_message)
+            # log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            # self.write_log(log_message)
             return "ABORT"
 
         # if self.validator.validate_transactions(read_set, write_set, self.database):
         if self.validator.validate_transactions(transaction, self.get_timestamp):
             # return abort message as there is a conflict with another client service
-            log_message = "{}$$ABORT".format(transaction['transaction_id'])
-            self.write_log(log_message)
+            # log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            # self.write_log(log_message)
             return "ABORT"
 
+        # 2pc implementation
+
         # self.validator.lock_resources(write_set)
-        self.validator.lock_resources(transaction)
+        if not self.validator.lock_resources(transaction):
+            return "ABORT"
+
+        log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
+        self.write_log(log_message)
 
         log_message = "{}$$PREPARED".format(transaction['transaction_id'])
         self.write_log(log_message)
 
-        # 2pc implementation
-        for i in range(1,3):
-            if not self.send_prepare_message(self.PORT+i, transaction):
+        # prepared received
+
+        for i in range(1, 3):
+            if not self.send_prepare_message(self.PORT + i, transaction):
                 log_message = "{}$$ABORT".format(transaction['transaction_id'])
                 self.write_log(log_message)
+                self.validator.unlock_resources(transaction)
                 return "ABORT"
-
-        # prepared received
 
         log_message = "{}$$COMMIT".format(transaction['transaction_id'])
         self.write_log(log_message)
 
         # commit message to followers
-        for i in range(1,3):
-            if not self.send_commit_message(self.PORT+i, transaction):
+        for i in range(1, 3):
+            # This will not happen in our model
+            if not self.send_commit_message(self.PORT + i, transaction):
+                log_message = "{}$$ABORT".format(transaction['transaction_id'])
+                self.write_log(log_message)
                 return "ABORT"
         # commit acknowledge
 
@@ -195,13 +198,9 @@ class Agent:
             timeStamp = 0
             # update the database with new values
             self.update_account(account_number, balance)
-            self.update_timestamp(account_number, timeStamp)
-
-            # write replication log with the latest transaction
-            self.write_replication_log(transaction["transaction_id"], account_number, balance)
 
         self.validator.unlock_resources(transaction)
-        
+
         log_message = "{}$$COMPLETED".format(transaction['transaction_id'])
         self.write_log(log_message)
 
@@ -211,9 +210,8 @@ class Agent:
         # TODO decide on format to write the replication log
         with open(self.log_file_path, 'w') as f:
             f.write(message + '\n')
-            
-    
-    def send_prepare_message(self,port, transaction):
+
+    def send_prepare_message(self, port, transaction):
         # requests timeout
         url = self.URL + ':' + port + '/prepare_message/'
         r = requests.post(url, data={'transaction': transaction}, timeout=5)
@@ -224,7 +222,7 @@ class Agent:
             return False
         return True
 
-    def send_commit_message(self,port, transaction):
+    def send_commit_message(self, port, transaction):
         # requests timeout
         url = self.URL + ':' + port + '/commit_message/'
         r = requests.post(url, data={'transaction': transaction}, timeout=5)
