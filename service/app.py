@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask
 import json
 from service import Service
 
@@ -15,15 +15,18 @@ app.config["DEBUG"] = True
 url = "http://" + IP
 service_instance = Service(url)
 
-@app.route('/restart/<node_id>/', methods=['GET'])
+
 # API from crashed leader
+@app.route('/restart/<node_id>/', methods=['GET'])
 def restart(node_id):
     print(node_id)
     service_instance.node_recover(node_id)
     return {}
 
+
 def main():
     app.run(host=IP, port=PORT)
+
 
 if __name__ == "__main__":
     main()

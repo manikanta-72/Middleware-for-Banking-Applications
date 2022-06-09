@@ -74,12 +74,14 @@ def create():
 def home():
     return "<h1> Home page of Transaction Project"
 
+
 @app.route('/leader_changed/', methods=['POST'])
 def leader_changed():
     leader_port = request.get_json()['leader']
     from client import leader_changed
     leader_changed(leader_port)
     return {'response': 'OK'}
+
 
 def main():
     app.run(host=IP, port=PORT)

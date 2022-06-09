@@ -54,7 +54,7 @@ class TransactionSerializer:
         tx.set_timestamp(time_ns)
         # TODO call agent for reads. Add timeout
 
-        url = "http://127.0.0.1" + ':' + str(8000) + '/read/'
+        url = "http://127.0.0.1" + ':' + str(current_leader) + '/read/'
         print("Agent URL: ", url)
         r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer}})
 

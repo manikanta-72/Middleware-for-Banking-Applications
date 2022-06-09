@@ -12,11 +12,7 @@ NUMBER_OF_PARTICIPANTS = 2
 
 class Agent:
     def __init__(self, url, port):
-        self.transaction_queue = {}
-        self.transaction_queue['started'] = set()
-        self.transaction_queue['Prepared'] = set()
-        self.transaction_queue['Committed'] = set()
-        self.transaction_queue['Completed'] = set()
+        self.transaction_queue = {'started': set(), 'Prepared': set(), 'Committed': set(), 'Completed': set()}
         self.validator = TransactionValidator()
         self.lock = threading.Lock()
         self.conn = None
@@ -24,6 +20,7 @@ class Agent:
         self.PORT = port
         self.log_file_path = "recovery_log.txt"
         self.leader = False
+        self.up = True
         print("XYAZZZ")
         try:
             # initialise the database instance
@@ -192,7 +189,7 @@ class Agent:
             commit_status: "COMMIT"/"ABORT" 
         '''
         transaction['transaction_id'] = self.get_transaction_id()
-        
+
         print("TMPXXX: ", transaction)
 
         # validate the commit ?
@@ -240,10 +237,9 @@ class Agent:
                 self.transaction_queue['Completed'].add(transaction)
                 return "ABORT"
 
-
         log_message = "{}$$COMMIT".format(transaction['transaction_id'])
         self.write_log(log_message)
-        
+
         self.transaction_queue['Prepared'].remove(transaction)
         self.transaction_queue['Commited'].add(transaction)
 
@@ -304,7 +300,7 @@ class Agent:
         for transaction in self.transaction_queue['Started']:
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
             self.write_log(log_message)
-        
+
         for transaction in self.transaction_queue['Prepared']:
             self.validator.unlock_resources(transaction)
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
@@ -315,10 +311,10 @@ class Agent:
     def become_leader(self):
         # set the leader flag to true
         self.leader = True
-        for transaction_id in self.transaction_queue['Started']:
+        for transaction in self.transaction_queue['Started']:
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
             self.write_log(log_message)
-        
+
         for transaction in self.transaction_queue['Prepared']:
             self.validator.unlock_resources(transaction)
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
@@ -328,7 +324,12 @@ class Agent:
 
     def down_leader(self):
         self.leader = False
+        self.up = False
         # delete the local cache
         self.validator = TransactionValidator()
-        # close the database connection
-        self.conn.close()
+
+    def up_node(self):
+        url = self.URL + ':' + str(9000) + '/restart/' + str(self.PORT) + "/"
+        r = requests.get(url)
+        print("Received:", r)
+        self.up = True

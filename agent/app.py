@@ -2,7 +2,8 @@ from fileinput import filename
 from flask import Flask, request, send_from_directory, abort
 import json
 from agent import Agent
-#from client.transation import Transaction
+
+# from client.transation import Transaction
 
 app = Flask(__name__)
 config_file = "config.json"
@@ -25,7 +26,7 @@ def read():
     # read-set -- list of account numbers
     transaction = json_data['transaction']
     # validate for any ongoing commits
-    if agent_instance.leader:
+    if agent_instance.up:
         print("Received READ: ", transaction)
         status, return_data, timestamp = agent_instance.read_transaction(transaction)
         # need to return the timestamp of the resource
@@ -70,34 +71,46 @@ def prepare_message():
 
 @app.route('/poll/', methods=['POST'])
 def poll():
-    return {'response': 'OK'}
+    if agent_instance.up:
+        return {'status': 200}
+    else:
+        return {'status': 503}
+
 
 @app.route('/leader_changed/', methods=['POST'])
 def leader_changed():
     agent_instance.leader_changed()
     return {'response': 'OK'}
 
-@app.route('/down_leader/', methods=['POST'])
+
+@app.route('/down_leader/', methods=['GET'])
 def down_leader():
     status = agent_instance.down_leader()
     return {'status': status}
+
+
+@app.route('/up_node/', methods=['GET'])
+def up_node():
+    status = agent_instance.up_node()
+    return {'status': status}
+
 
 @app.route('/become_leader/', methods=['POST'])
 def become_leader():
     status = agent_instance.become_leader()
     return {'status': status}
 
+
 # send the current replication log to service
 @app.route('/replication_log/', methods=['GET'])
 def replication_log():
     try:
-        # stop processing the requests from clients till recovery is complete
-        data = ""
         with open('recovery_log.txt', 'r') as file:
             data = file.read()
         return {'data': data}
     except FileNotFoundError:
         abort(404)
+
 
 # recover the node by using leader's replication log
 @app.route('/sync_log/', methods=['POST'])
@@ -110,6 +123,7 @@ def sync_log():
     from recovery import recovery
     recovery(agent_instance)
     return {'response': 'OK'}
+
 
 def main():
     app.run(host=IP, port=PORT)
