@@ -20,9 +20,7 @@ agent_instance = Agent(url, PORT)
 # APIs from client
 @app.route('/read/', methods=['POST'])
 def read():
-    print("Received READ: XXXX")
     json_data = request.get_json()
-    print(request.form)
     # read-set -- list of account numbers
     transaction = json_data['transaction']
     # validate for any ongoing commits

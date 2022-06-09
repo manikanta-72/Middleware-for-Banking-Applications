@@ -10,11 +10,11 @@ class TransactionValidator():
     def check_resource_availability(self, transaction, WRITE):
         if WRITE:
             for resource, _ in transaction["write_set"]:
-                if self.resource_locks[resource]:
+                if resource in self.resource_locks:
                     return False
         else:
             for resource in transaction["read_set"]:
-                if self.resource_locks[resource]:
+                if resource in self.resource_locks:
                     return False
         return True
 

@@ -48,7 +48,7 @@ class TransactionSerializer:
 
         url = "http://127.0.0.1" + ':' + str(8000) + '/read/'
         print("Agent URL: ", url)
-        r = requests.post(url, json={'transaction': {'read_set': tx.read_set, 'write_set': tx.write_buffer}})
+        r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer}})
 
         print("Response for read is:", r.json())
 

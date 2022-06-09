@@ -18,14 +18,14 @@ class Agent:
         print("XYAZZZ")
         try:
             # initialise the database instance
-            conn = psycopg2.connect(
+            self.conn = psycopg2.connect(
                 host="localhost",
                 database="postgres",
                 user="postgres",
                 password="DB1",
                 port="5432")
 
-            conn.autocommit = True
+            self.conn.autocommit = True
 
             create_bank_balance_table = """
             CREATE TABLE IF NOT EXISTS bank_balance (
@@ -37,9 +37,10 @@ class Agent:
             );
             """
 
-            cursor = conn.cursor()
+            cursor = self.conn.cursor()
             cursor.execute(create_bank_balance_table)
-            conn.commit()
+            cursor.close()
+            self.conn.commit()
 
         except Exception as e:
             print(str(e))
@@ -64,14 +65,15 @@ class Agent:
         try:
             balances = []
             curr_time = time.time_ns()
-            with self.conn:
-                with self.conn.cursor() as cur:
-                    cur.execute(get_balances, list(account_numbers))
-                    row = cur.fetchone()
-                    while row is not None:
-                        print(row)
-                        balances.append([row, curr_time])
-                        row = cur.fetchone()
+            cursor = self.conn.cursor()
+            cursor.execute(get_balances, list(account_numbers))
+            row = cursor.fetchone()
+            while row is not None:
+                print(row)
+                balances.append([row, curr_time])
+                row = cursor.fetchone()
+
+            cursor.close()
 
             return balances
 
@@ -109,6 +111,8 @@ class Agent:
         '''
         if not self.validator.check_resource_availability(transaction, 0):
             return False, []
+
+        print("Available resources")
 
         # return the current timestamp
         return True, self.get_account_balances(transaction['read_set'])
