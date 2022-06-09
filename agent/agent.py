@@ -19,6 +19,7 @@ class Agent:
         self.URL = url
         self.PORT = port
         self.log_file_path = "recovery_log.txt"
+        self.leader = False
         print("XYAZZZ")
         try:
             # initialise the database instance
@@ -268,3 +269,9 @@ class Agent:
         if r_json['commit_status'] != "YES":
             return False
         return True
+
+    def become_leader(self):
+        self.leader = True
+
+    def down_leader(self):
+        self.leader = False    

@@ -13,7 +13,7 @@ def write_to_database(transactions_dict, transaction_id):
             password="dbpassword",
             port="5432")
         cursor = conn.cursor()
-        sql_query = """UPDATE bank_balance SET balance = (%s) WHERE account_number = (%s);"""
+        sql_query = """UPDATE bank_balance SET balance = %s WHERE account_number = %s;"""
         # execute the UPDATE query
         cursor.execute(sql_query, (transactions_dict[transaction_id].values(), transactions_dict[transaction_id].keys()))
         conn.commit()
@@ -33,6 +33,7 @@ def replay_missed_transactions(new_leader_recovery_log, last_completed_transacti
                 elif log_line[1] == "ABORT":
                     transactions_dict.pop(log_line[0], None)
                 elif log_line[1] == "COMPLETED":
+                    # need pop here???
                     # write dict values to database
                     write_to_database(transactions_dict, log_line[0])
                     # for key, value in transactions_dict[log_line[0]].items():
@@ -46,7 +47,7 @@ def replay_missed_transactions(new_leader_recovery_log, last_completed_transacti
 # input is leader's recovery log
 def recovery(recovery_log):
     # ask the service and get the new leader recovery log
-    new_leader_recovery_log = "agent/new_leader_recovery_log.txt" # service returns log file here
+    new_leader_recovery_log = "new_leader_recovery_log.txt" # service returns log file here
     last_completed_transaction = "" # to check which transactions are missed during crash
     with open(recovery_log) as file:
         for line in file:
