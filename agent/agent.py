@@ -272,6 +272,8 @@ class Agent:
 
     def become_leader(self):
         self.leader = True
+        # TODO: abort the ongoing transactions
 
     def down_leader(self):
-        self.leader = False    
+        self.leader = False
+        # TODO: delete the local cache

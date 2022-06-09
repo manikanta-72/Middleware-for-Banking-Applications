@@ -103,7 +103,7 @@ def sync_log():
         f.write(data)
     # recover using logs
     from recovery import recovery
-    recovery()
+    recovery(agent_instance)
     return {'response': 'OK'}
 
 def main():

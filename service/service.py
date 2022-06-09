@@ -17,16 +17,15 @@ class Service:
                 print(r)
                 time.sleep(5)
             else:
+                # TODO: while needed?
                 while True:
                     self.current_leader = (self.current_leader+1) % self.number_of_nodes
                     api_call = self.URL + ':' + str(self.current_leader) + '/become_leader/'
                     # post request to set next leader
                     r = requests.post(api_call, data={'leader': self.node_ports[self.current_leader]}, timeout=5)
+                    # TODO: send a notification to client and other participants about the new leader
                     if r.status_code == 200:
                         break
-                
-                # timeout to up the crashed leader again
-                # ask new leader for replication log and save the returned file
 
     def node_recover(self, port):
         while True:
