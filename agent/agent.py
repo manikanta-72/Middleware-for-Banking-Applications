@@ -5,6 +5,8 @@ import psycopg2
 from transaction_validator import TransactionValidator
 import threading
 
+NUMBER_OF_PARTICIPANTS = 0
+
 
 class Agent:
     def __init__(self, url, port):
@@ -85,7 +87,9 @@ class Agent:
         sql_query = """UPDATE bank_balance SET balance = %s, updated_at = %s WHERE account_number = %s;"""
         try:
             # execute the UPDATE query
-            self.conn.cursor().execute(sql_query, balance, time.time_ns(), account_number)
+            cursor = self.conn.cursor()
+            cursor.execute(sql_query, [balance, time.time_ns(), account_number])
+            cursor.close()
             self.conn.commit()
         except Exception as e:
             print(str(e))
@@ -95,9 +99,11 @@ class Agent:
         sql_query = """SELECT updated_at FROM bank_balance WHERE account_number = %s;"""
         try:
             # execute the UPDATE query
-            self.conn.cursor().execute(sql_query, account_number)
-            ts = self.conn.cursor().fetchone()
-            return ts
+            cursor = self.conn.cursor()
+            cursor.execute(sql_query, [account_number])
+            ts = cursor.fetchone()
+            cursor.close()
+            return ts[0]
         except Exception as e:
             print(str(e))
 
@@ -110,12 +116,12 @@ class Agent:
             return_data: list of balances wrt to input account numbers
         '''
         if not self.validator.check_resource_availability(transaction, 0):
-            return False, []
+            return False, [], 0
 
         print("Available resources")
 
         # return the current timestamp
-        return True, self.get_account_balances(transaction['read_set'])
+        return True, self.get_account_balances(transaction['read_set']), time.time_ns()
 
     def prepare_for_commit(self, transaction):
         if not self.validator.check_resource_availability(transaction):
@@ -153,19 +159,23 @@ class Agent:
         '''
         transaction['transaction_id'] = self.get_transaction_id()
 
+        print("TMPXXX: ", transaction)
+
         # validate the commit ?
         # if self.validator.check_resource_availability(read_set, write_set):
-        if self.validator.check_resource_availability(transaction, 1):
+        if not self.validator.check_resource_availability(transaction, 1):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
             # log_message = "{}$$ABORT".format(transaction['transaction_id'])
             # self.write_log(log_message)
+            print('availability abort')
             return "ABORT"
 
         # if self.validator.validate_transactions(read_set, write_set, self.database):
-        if self.validator.validate_transactions(transaction, self.get_timestamp):
+        if not self.validator.validate_transactions(transaction, self.get_timestamp):
             # return abort message as there is a conflict with another client service
             # log_message = "{}$$ABORT".format(transaction['transaction_id'])
             # self.write_log(log_message)
+            print('validation abort')
             return "ABORT"
 
         # 2pc implementation
@@ -174,15 +184,18 @@ class Agent:
         if not self.validator.lock_resources(transaction):
             return "ABORT"
 
+        print("start")
+
         log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
         self.write_log(log_message)
 
         log_message = "{}$$PREPARED".format(transaction['transaction_id'])
         self.write_log(log_message)
 
+
         # prepared received
 
-        for i in range(1, 3):
+        for i in range(1, NUMBER_OF_PARTICIPANTS):
             if not self.send_prepare_message(self.PORT + i, transaction):
                 log_message = "{}$$ABORT".format(transaction['transaction_id'])
                 self.write_log(log_message)
@@ -193,7 +206,7 @@ class Agent:
         self.write_log(log_message)
 
         # commit message to followers
-        for i in range(1, 3):
+        for i in range(1, NUMBER_OF_PARTICIPANTS):
             # This will not happen in our model
             if not self.send_commit_message(self.PORT + i, transaction):
                 log_message = "{}$$ABORT".format(transaction['transaction_id'])
@@ -201,7 +214,7 @@ class Agent:
                 return "ABORT"
         # commit acknowledge
 
-        for account_number, balance in transaction['write_set']:
+        for account_number, balance in transaction['write_set'].items():
             timeStamp = 0
             # update the database with new values
             self.update_account(account_number, balance)
@@ -215,7 +228,7 @@ class Agent:
 
     def write_log(self, message):
         # TODO decide on format to write the replication log
-        with open(self.log_file_path, 'w') as f:
+        with open(self.log_file_path, 'a+') as f:
             f.write(message + '\n')
 
     def send_prepare_message(self, port, transaction):

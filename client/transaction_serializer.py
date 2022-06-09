@@ -9,9 +9,14 @@ from typing import Dict, Set
 CLIENT_URL = ""
 
 
-def commit_transaction(transaction: Transaction) -> bool:
+def commit_transaction(tx: Transaction) -> bool:
     # call the agent with write set
     # TODO. Keep a timeout
+
+    url = "http://127.0.0.1" + ':' + str(8000) + '/commit/'
+    r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer, 'time_stamp': tx.read_timestamp}})
+
+    print("Response for commit is:", r.json())
 
     return True
 
@@ -51,6 +56,8 @@ class TransactionSerializer:
         r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer}})
 
         print("Response for read is:", r.json())
+
+        tx.read_timestamp = r.json()['timestamp']
 
         self.transactions[time_ns] = tx
 

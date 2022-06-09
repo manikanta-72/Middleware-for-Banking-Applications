@@ -9,7 +9,7 @@ class TransactionValidator():
     # need to check different values for different operations 
     def check_resource_availability(self, transaction, WRITE):
         if WRITE:
-            for resource, _ in transaction["write_set"]:
+            for resource, _ in transaction["write_set"].items():
                 if resource in self.resource_locks:
                     return False
         else:
@@ -31,12 +31,12 @@ class TransactionValidator():
     def lock_resources(self, transaction):
         self.global_lock.acquire()
         can_acquire = True
-        for resource, _ in transaction["write_set"]:
+        for resource, _ in transaction["write_set"].items():
             if resource in self.resource_locks:
                 can_acquire = False
                 break
         if can_acquire:
-            for resource, _ in transaction["write_set"]:
+            for resource, _ in transaction["write_set"].items():
                 self.resource_locks.add(resource)
 
         self.global_lock.release()
@@ -45,7 +45,7 @@ class TransactionValidator():
 
     def unlock_resources(self, transaction):
         self.global_lock.acquire()
-        for resource, _ in transaction["write_set"]:
+        for resource, _ in transaction["write_set"].items():
             self.resource_locks.remove(resource)
         self.global_lock.release()
 

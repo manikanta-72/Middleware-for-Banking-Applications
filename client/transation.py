@@ -9,6 +9,7 @@ class Transaction:
         self.finished_timestamp: int = 0
         self.write_buffer: Dict[int, int] = {}
         self.read_set: Set[int] = set()
+        self.read_timestamp = 0
 
     def set_writes(self, write_dict) -> None:
         self.write_buffer = write_dict

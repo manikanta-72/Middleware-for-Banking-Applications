@@ -25,9 +25,9 @@ def read():
     transaction = json_data['transaction']
     # validate for any ongoing commits
     print("Received READ: ", transaction)
-    status, return_data = agent_instance.read_transaction(transaction)
+    status, return_data, timestamp = agent_instance.read_transaction(transaction)
     # need to return the timestamp of the resource
-    return {'read_status': status, 'data': return_data}
+    return {'read_status': status, 'data': return_data, 'timestamp': timestamp}
 
 
 @app.route('/commit/', methods=['POST'])
@@ -39,6 +39,7 @@ def commit():
     transaction = json_data['transaction']
     # commit_status = agent_instance.commit_transaction(read_set, write_set, read_time)
     commit_status = agent_instance.commit_transaction(transaction)
+    print("commit_status", commit_status)
     return {'commit': commit_status}
 
 
