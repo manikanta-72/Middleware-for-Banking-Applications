@@ -18,6 +18,9 @@ def commit_transaction(tx: Transaction) -> bool:
 
     print("Response for commit is:", r.json())
 
+    if r.json()['commit'] == "503":
+        return False
+
     return True
 
 
@@ -56,6 +59,9 @@ class TransactionSerializer:
         r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer}})
 
         print("Response for read is:", r.json())
+
+        if r.json()['read_status'] == "503":
+            raise Exception("Leader is down")
 
         tx.read_timestamp = r.json()['timestamp']
 
