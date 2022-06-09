@@ -12,7 +12,11 @@ NUMBER_OF_PARTICIPANTS = 2
 
 class Agent:
     def __init__(self, url, port):
-        self.pending_queue = {}
+        self.transaction_queue = {}
+        self.transaction_queue['started'] = set()
+        self.transaction_queue['Prepared'] = set()
+        self.transaction_queue['Committed'] = set()
+        self.transaction_queue['Completed'] = set()
         self.validator = TransactionValidator()
         self.lock = threading.Lock()
         self.conn = None
@@ -142,19 +146,28 @@ class Agent:
         log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
         self.write_log(log_message)
 
+        self.transaction_queue['Started'].add(transaction)
+
         if not self.validator.check_resource_availability(transaction, 1):
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
             self.write_log(log_message)
+            self.transaction_queue['Started'].remove(transaction)
+            self.transaction_queue['Completed'].add(transaction)
             return "NO"
 
         self.validator.lock_resources(transaction)
         log_message = "{}$$PREPARED".format(transaction['transaction_id'])
         self.write_log(log_message)
+        self.transaction_queue['Started'].remove(transaction)
+        self.transaction_queue['Prepared'].add(transaction)
         return "YES"
 
     def log_commit_transaction(self, transaction):
         log_message = "{}$$COMMIT".format(transaction['transaction_id'])
         self.write_log(log_message)
+
+        self.transaction_queue['Prepared'].remove(transaction)
+        self.transaction_queue['Commited'].add(transaction)
 
         for account_number, balance in transaction['write_set'].items():
             # update the database with new values
@@ -164,6 +177,9 @@ class Agent:
 
         log_message = "{}$$COMPLETED".format(transaction['transaction_id'])
         self.write_log(log_message)
+
+        self.transaction_queue['Commmited'].remove(transaction)
+        self.transaction_queue['Completed'].add(transaction)
 
         return "YES"
 
@@ -176,7 +192,7 @@ class Agent:
             commit_status: "COMMIT"/"ABORT" 
         '''
         transaction['transaction_id'] = self.get_transaction_id()
-
+        
         print("TMPXXX: ", transaction)
 
         # validate the commit ?
@@ -198,18 +214,21 @@ class Agent:
 
         # 2pc implementation
 
-        # self.validator.lock_resources(write_set)
-        if not self.validator.lock_resources(transaction):
-            return "ABORT"
-
-        print("start")
-
         log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
         self.write_log(log_message)
 
+        self.transaction_queue['Started'].add(transaction)
+
+        # self.validator.lock_resources(write_set)
+        if not self.validator.lock_resources(transaction):
+            self.transaction_queue['Started'].remove(transaction)
+            self.transaction_queue['Completed'].add(transaction)
+            return "ABORT"
+
         log_message = "{}$$PREPARED".format(transaction['transaction_id'])
         self.write_log(log_message)
-
+        self.transaction_queue['Started'].remove(transaction)
+        self.transaction_queue['Prepared'].add(transaction)
         # prepared received
 
         for i in range(1, NUMBER_OF_PARTICIPANTS):
@@ -217,10 +236,16 @@ class Agent:
                 log_message = "{}$$ABORT".format(transaction['transaction_id'])
                 self.write_log(log_message)
                 self.validator.unlock_resources(transaction)
+                self.transaction_queue['Prepared'].remove(transaction)
+                self.transaction_queue['Completed'].add(transaction)
                 return "ABORT"
+
 
         log_message = "{}$$COMMIT".format(transaction['transaction_id'])
         self.write_log(log_message)
+        
+        self.transaction_queue['Prepared'].remove(transaction)
+        self.transaction_queue['Commited'].add(transaction)
 
         # commit message to followers
         for i in range(1, NUMBER_OF_PARTICIPANTS):
@@ -228,6 +253,9 @@ class Agent:
             if not self.send_commit_message(self.PORT + i, transaction):
                 log_message = "{}$$ABORT".format(transaction['transaction_id'])
                 self.write_log(log_message)
+                self.validator.unlock_resources(transaction)
+                self.transaction_queue['Commited'].remove(transaction['transaction_id'])
+                self.transaction_queue['Completed'].add(transaction['transaction_id'])
                 return "ABORT"
         # commit acknowledge
 
@@ -240,7 +268,8 @@ class Agent:
 
         log_message = "{}$$COMPLETED".format(transaction['transaction_id'])
         self.write_log(log_message)
-
+        self.transaction_queue['Commited'].remove(transaction['transaction_id'])
+        self.transaction_queue['Completed'].add(transaction['transaction_id'])
         return "COMMIT"
 
     def write_log(self, message):
@@ -271,12 +300,31 @@ class Agent:
         return True
 
     def leader_changed(self):
-        # TODO: abort the ongoing transactions
-        pass
+        # Abort all the ongoing transactions -- ignore them as they are not processed by other participants 
+        for transaction in self.transaction_queue['Started']:
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
+        
+        for transaction in self.transaction_queue['Prepared']:
+            self.validator.unlock_resources(transaction)
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
+
+        return {'status': 'OK'}
 
     def become_leader(self):
+        # set the leader flag to true
         self.leader = True
-        # TODO: abort the ongoing transactions
+        for transaction_id in self.transaction_queue['Started']:
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
+        
+        for transaction in self.transaction_queue['Prepared']:
+            self.validator.unlock_resources(transaction)
+            log_message = "{}$$ABORT".format(transaction['transaction_id'])
+            self.write_log(log_message)
+
+        return {'status': 'OK'}
 
     def down_leader(self):
         self.leader = False

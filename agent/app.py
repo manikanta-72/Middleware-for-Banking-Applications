@@ -79,13 +79,13 @@ def leader_changed():
 
 @app.route('/down_leader/', methods=['POST'])
 def down_leader():
-    agent_instance.down_leader()
-    return {'response': 'OK'}
+    status = agent_instance.down_leader()
+    return {'status': status}
 
 @app.route('/become_leader/', methods=['POST'])
 def become_leader():
-    agent_instance.become_leader()
-    return {'response': 'OK'}
+    status = agent_instance.become_leader()
+    return {'status': status}
 
 # send the current replication log to service
 @app.route('/replication_log/', methods=['GET'])
