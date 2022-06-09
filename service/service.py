@@ -17,15 +17,17 @@ class Service:
                 print(r)
                 time.sleep(5)
             else:
-                # TODO: while needed?
-                while True:
-                    self.current_leader = (self.current_leader+1) % self.number_of_nodes
-                    api_call = self.URL + ':' + str(self.current_leader) + '/become_leader/'
-                    # post request to set next leader
-                    r = requests.post(api_call, data={'leader': self.node_ports[self.current_leader]}, timeout=5)
-                    # TODO: send a notification to client and other participants about the new leader
-                    if r.status_code == 200:
-                        break
+                old_leader = self.current_leader
+                self.current_leader = (self.current_leader+1) % self.number_of_nodes
+                api_call = self.URL + ':' + str(self.current_leader) + '/become_leader/'
+                # post request to set next leader
+                r = requests.post(api_call, data={'leader': self.current_leader})
+                # TODO: send a notification to clients about the new leader
+                for node in self.node_ports:
+                    if node != self.current_leader and node != old_leader:
+                        # sending notification to other participants about the leader change
+                        api_call = self.URL + ':' + str(node) + '/leader_changed/'
+                        r = requests.post(api_call, data={'leader': self.current_leader})
 
     def node_recover(self, port):
         while True:

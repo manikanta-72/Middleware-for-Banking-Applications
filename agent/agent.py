@@ -270,10 +270,17 @@ class Agent:
             return False
         return True
 
+    def leader_changed(self):
+        # TODO: abort the ongoing transactions
+        pass
+
     def become_leader(self):
         self.leader = True
         # TODO: abort the ongoing transactions
 
     def down_leader(self):
         self.leader = False
-        # TODO: delete the local cache
+        # delete the local cache
+        self.validator = TransactionValidator()
+        # close the database connection
+        self.conn.close()

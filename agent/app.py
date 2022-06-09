@@ -72,6 +72,11 @@ def prepare_message():
 def poll():
     return {'response': 'OK'}
 
+@app.route('/leader_changed/', methods=['POST'])
+def leader_changed():
+    agent_instance.leader_changed()
+    return {'response': 'OK'}
+
 @app.route('/down_leader/', methods=['POST'])
 def down_leader():
     agent_instance.down_leader()
