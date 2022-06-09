@@ -1,3 +1,5 @@
+import traceback
+
 import psycopg2
 import ast
 
@@ -17,7 +19,7 @@ def write_to_database(transactions_dict, transaction_id):
         conn.commit()
         cursor.close()
     except Exception as e:
-            print(str(e))
+            traceback.print_exc()
     
 def replay_missed_transactions(new_leader_recovery_log, last_completed_transaction):
     start_replay = False

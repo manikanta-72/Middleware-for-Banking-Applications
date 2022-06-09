@@ -1,11 +1,13 @@
 import time
+import traceback
+
 import requests
 import psycopg2
 
 from transaction_validator import TransactionValidator
 import threading
 
-NUMBER_OF_PARTICIPANTS = 0
+NUMBER_OF_PARTICIPANTS = 2
 
 
 class Agent:
@@ -45,7 +47,7 @@ class Agent:
             self.conn.commit()
 
         except Exception as e:
-            print(str(e))
+            traceback.print_exc()
 
     # We are going to use time in nanos for transaction id
     def get_transaction_id(self):
@@ -80,19 +82,29 @@ class Agent:
             return balances
 
         except Exception as e:
-            print(str(e))
+            traceback.print_exc()
 
     def update_account(self, account_number, balance):
         # update the balance of the account and write current timestamp for an account number
-        sql_query = """UPDATE bank_balance SET balance = %s, updated_at = %s WHERE account_number = %s;"""
+        # Check if exists
         try:
+            if not self.get_account_balances([account_number]):
+                insert_sql_query = """INSERT INTO bank_balance VALUES(%s, %s, %s, %s);"""
+                cursor = self.conn.cursor()
+                curr_time = time.time_ns()
+                cursor.execute(insert_sql_query, [account_number, balance, curr_time, curr_time])
+                cursor.close()
+                self.conn.commit()
+
+            sql_query = """UPDATE bank_balance SET balance = %s, updated_at = %s WHERE account_number = %s;"""
+
             # execute the UPDATE query
             cursor = self.conn.cursor()
             cursor.execute(sql_query, [balance, time.time_ns(), account_number])
             cursor.close()
             self.conn.commit()
         except Exception as e:
-            print(str(e))
+            traceback.print_exc()
 
     def get_timestamp(self, account_number):
         # return the timestamp of the latest write of an account number
@@ -103,9 +115,11 @@ class Agent:
             cursor.execute(sql_query, [account_number])
             ts = cursor.fetchone()
             cursor.close()
+            if not ts:
+                return 0
             return ts[0]
-        except Exception as e:
-            print(str(e))
+        except:
+            traceback.print_exc()
 
     def read_transaction(self, transaction):
         '''
@@ -124,7 +138,10 @@ class Agent:
         return True, self.get_account_balances(transaction['read_set']), time.time_ns()
 
     def prepare_for_commit(self, transaction):
-        if not self.validator.check_resource_availability(transaction):
+        log_message = "{}$$START$${}".format(str(transaction['transaction_id']), str(transaction))
+        self.write_log(log_message)
+
+        if not self.validator.check_resource_availability(transaction, 1):
             log_message = "{}$$ABORT".format(transaction['transaction_id'])
             self.write_log(log_message)
             return "NO"
@@ -138,7 +155,7 @@ class Agent:
         log_message = "{}$$COMMIT".format(transaction['transaction_id'])
         self.write_log(log_message)
 
-        for account_number, balance in transaction['write_set']:
+        for account_number, balance in transaction['write_set'].items():
             # update the database with new values
             self.update_account(account_number, balance)
 
@@ -192,7 +209,6 @@ class Agent:
         log_message = "{}$$PREPARED".format(transaction['transaction_id'])
         self.write_log(log_message)
 
-
         # prepared received
 
         for i in range(1, NUMBER_OF_PARTICIPANTS):
@@ -233,8 +249,8 @@ class Agent:
 
     def send_prepare_message(self, port, transaction):
         # requests timeout
-        url = self.URL + ':' + port + '/prepare_message/'
-        r = requests.post(url, data={'transaction': transaction}, timeout=5)
+        url = self.URL + ':' + str(port) + '/prepare_message/'
+        r = requests.post(url, json={'transaction': transaction})
         if r.status_code != 200:
             return False
         r_json = r.json()
@@ -244,8 +260,8 @@ class Agent:
 
     def send_commit_message(self, port, transaction):
         # requests timeout
-        url = self.URL + ':' + port + '/commit_message/'
-        r = requests.post(url, data={'transaction': transaction}, timeout=5)
+        url = self.URL + ':' + str(port) + '/commit_message/'
+        r = requests.post(url, json={'transaction': transaction})
         if r.status_code != 200:
             return False
         r_json = r.json()

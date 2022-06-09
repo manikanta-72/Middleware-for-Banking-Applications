@@ -13,7 +13,7 @@ IP = server_configs["ip"]
 PORT = server_configs["port"]
 app.config["DEBUG"] = True
 
-url = "https://" + IP
+url = "http://" + IP
 agent_instance = Agent(url, PORT)
 
 
@@ -46,16 +46,16 @@ def commit():
 @app.route('/commit_message/', methods=['POST'])
 def commit_message():
     json_data = request.get_json()
-    write_set = json_data['write-set']
-    status = agent_instance.log_commit_transaction(write_set)
+    tx = json_data['transaction']
+    status = agent_instance.log_commit_transaction(tx)
     return {'commit_status': status}
 
 
 @app.route('/prepare_message/', methods=['POST'])
 def prepare_message():
     json_data = request.get_json()
-    write_set = json_data['write_set']
-    status = agent_instance.prepare_for_commit(write_set)
+    tx = json_data['transaction']
+    status = agent_instance.prepare_for_commit(tx)
     return {'prepare_status': status}
 
 
