@@ -68,7 +68,7 @@ class Agent:
 
         get_balances = """
         SELECT account_number, balance FROM bank_balance
-        WHERE account_number IN (%s);
+        WHERE account_number IN %s;
         """
 
         if not account_numbers:
@@ -78,7 +78,8 @@ class Agent:
             balances = []
             curr_time = time.time_ns()
             cursor = self.conn.cursor()
-            cursor.execute(get_balances, list(account_numbers))
+            print("Account numbers", account_numbers)
+            cursor.execute(get_balances, (tuple(account_numbers),))
             row = cursor.fetchone()
             while row is not None:
                 print(row)
@@ -87,6 +88,7 @@ class Agent:
 
             cursor.close()
 
+            print("Fetched balances", balances)
             return balances
 
         except Exception as e:
