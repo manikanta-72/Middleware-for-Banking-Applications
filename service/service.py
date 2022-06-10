@@ -12,29 +12,29 @@ class Service:
 
     def polling(self):
         while True:
+            time.sleep(5)
             api_call = self.URL + ':' + str(self.current_leader) + '/poll/'
             r = requests.post(api_call)
             if r.json()['status'] == 200:
                 print(r)
-                time.sleep(5)
             else:
                 old_leader = self.current_leader
-                self.current_leader = (self.current_leader + 1) % self.number_of_nodes
+                self.current_leader = ((int(self.current_leader)-8000 + 1) % self.number_of_nodes) + 8000
 
                 for node in self.node_ports:
                     if node != self.current_leader and node != old_leader:
                         # sending notification to other participants about the leader change
                         api_call = self.URL + ':' + str(node) + '/leader_changed/'
-                        r = requests.post(api_call, data={'leader': self.current_leader})
+                        r = requests.post(api_call, json={'leader': self.current_leader})
 
                 api_call = self.URL + ':' + str(self.current_leader) + '/become_leader/'
                 # post request to set next leader
-                r = requests.post(api_call, data={'leader': self.current_leader})
+                r = requests.post(api_call, json={'leader': self.current_leader})
                 # send a notification to clients to send transactions to new leader
                 if r.status_code == 200:
                     for node in self.client_ports:
                         client_api_call = self.URL + ':' + str(node) + '/leader_changed/'
-                        c = requests.post(client_api_call, data={'leader': self.current_leader})
+                        c = requests.post(client_api_call, json={'leader': self.current_leader})
 
     def node_recover(self, port):
         # Halt leader from processing transactions

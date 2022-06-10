@@ -5,16 +5,10 @@ import ast
 
 def write_to_database(agent_instance, transactions_dict, transaction_id):
     try:
-        cursor = agent_instance.conn.cursor()
-        sql_query = """UPDATE bank_balance SET balance = %s WHERE account_number = %s;"""
-        # execute the UPDATE query
-        values = []
-        for k, v in transactions_dict[transaction_id].items():
-            values.append((v, k))
+        print("Recovering:", transactions_dict)
+        for k, v in transactions_dict[transaction_id]['write_set'].items():
+            agent_instance.update_account(k, v)
 
-        cursor.executemany(sql_query, values)
-        cursor.close()
-        agent_instance.conn.commit()
     except Exception as e:
         traceback.print_exc()
 
@@ -36,6 +30,9 @@ def replay_missed_transactions(agent_instance, new_leader_recovery_log, last_com
                     transactions_dict.pop(log_line[0], None)
                     # for key, value in transactions_dict[log_line[0]].items():
                     #     print(key, value)
+
+                with open('recovery_log.txt', 'a') as f:
+                    f.write(line)
                 continue
             if log_line[1] == "COMPLETED" and log_line[0] == last_completed_transaction:
                 start_replay = True

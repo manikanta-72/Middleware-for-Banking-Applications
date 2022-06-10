@@ -14,6 +14,8 @@ PORT = server_configs["port"]
 app.config["DEBUG"] = True
 app.config["SECRET_KEY"] = server_configs["secret_key"]
 
+current_leader = 8000
+
 
 def parse_reads_and_writes(content: str) -> (Set, Dict):
     if ' ' in content:
@@ -63,7 +65,7 @@ def create():
 
         try:
             read_set, write_dict = parse_reads_and_writes(content)
-            run_transaction(read_set, write_dict)
+            run_transaction(read_set, write_dict, current_leader)
         except Exception as e:
             flash(str(e))
 
@@ -78,8 +80,8 @@ def home():
 @app.route('/leader_changed/', methods=['POST'])
 def leader_changed():
     leader_port = request.get_json()['leader']
-    from client import leader_changed
-    leader_changed(leader_port)
+    global current_leader
+    current_leader = leader_port
     return {'response': 'OK'}
 
 

@@ -1,6 +1,7 @@
 from flask import Flask
 import json
 from service import Service
+import threading
 
 app = Flask(__name__)
 config_file = "config.json"
@@ -25,6 +26,8 @@ def restart(node_id):
 
 
 def main():
+    t = threading.Thread(target=service_instance.polling, args=())
+    t.start()
     app.run(host=IP, port=PORT)
 
 

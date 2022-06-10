@@ -3,18 +3,18 @@ import time
 from transation import Transaction
 import threading
 import requests
-from client import current_leader
 from typing import Dict, Set
 
 CLIENT_URL = ""
 
 
-def commit_transaction(tx: Transaction) -> bool:
+def commit_transaction(tx: Transaction, current_leader) -> bool:
     # call the agent with write set
     # TODO. Keep a timeout
 
     url = "http://127.0.0.1" + ':' + str(current_leader) + '/commit/'
-    r = requests.post(url, json={'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer, 'time_stamp': tx.read_timestamp}})
+    r = requests.post(url, json={
+        'transaction': {'read_set': list(tx.read_set), 'write_set': tx.write_buffer, 'time_stamp': tx.read_timestamp}})
 
     print("Response for commit is:", r.json())
 
@@ -45,7 +45,7 @@ class TransactionSerializer:
         return t
 
     # Use the time nanos for the transaction id
-    def start_transaction_read_phase(self, tx: Transaction) -> None:
+    def start_transaction_read_phase(self, tx: Transaction, current_leader) -> None:
         # Note the current timestamp
         self.lock.acquire()
         time.sleep(0.0001)
@@ -68,7 +68,7 @@ class TransactionSerializer:
         self.transactions[time_ns] = tx
 
     # this part is serialized/synchronized
-    def validate_transaction_and_write(self, tx: Transaction) -> bool:
+    def validate_transaction_and_write(self, tx: Transaction, current_leader) -> bool:
         self.lock.acquire()
         finished_before_tx: Set[int] = set()
         for t in self.finished_transactions:
@@ -99,7 +99,7 @@ class TransactionSerializer:
         self.validated_transactions[tx.timestamp] = tx
 
         # Commit tx to Database
-        result = commit_transaction(tx)
+        result = commit_transaction(tx, current_leader)
 
         # Add to finished if the commit is successful
         if result:
