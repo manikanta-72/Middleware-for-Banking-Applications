@@ -26,7 +26,7 @@ def read():
     # read-set -- list of account numbers
     transaction = json_data['transaction']
     # validate for any ongoing commits
-    if agent_instance.up:
+    if agent_instance.up and not agent_instance.stop_receiving:
         print("Received READ: ", transaction)
         status, return_data, timestamp = agent_instance.read_transaction(transaction)
         # need to return the timestamp of the resource
@@ -43,7 +43,7 @@ def commit():
     # read_time = json_data['read_time']
     transaction = json_data['transaction']
     # commit_status = agent_instance.commit_transaction(read_set, write_set, read_time)
-    if agent_instance.leader:
+    if agent_instance.leader and not agent_instance.stop_receiving:
         commit_status = agent_instance.commit_transaction(transaction)
         print("commit_status", commit_status)
         return {'commit': commit_status}
@@ -53,18 +53,24 @@ def commit():
 
 @app.route('/commit_message/', methods=['POST'])
 def commit_message():
-    json_data = request.get_json()
-    tx = json_data['transaction']
-    status = agent_instance.log_commit_transaction(tx)
-    return {'commit_status': status}
+    if agent_instance.up:
+        json_data = request.get_json()
+        tx = json_data['transaction']
+        status = agent_instance.log_commit_transaction(tx)
+        return {'commit_status': status}
+    else:
+        return {'commit_status': 'YES'}
 
 
 @app.route('/prepare_message/', methods=['POST'])
 def prepare_message():
-    json_data = request.get_json()
-    tx = json_data['transaction']
-    status = agent_instance.prepare_for_commit(tx)
-    return {'prepare_status': status}
+    if agent_instance.up:
+        json_data = request.get_json()
+        tx = json_data['transaction']
+        status = agent_instance.prepare_for_commit(tx)
+        return {'prepare_status': status}
+    else:
+        return {'prepare_status': "YES"}
 
 
 # APIs from External source for clock synchronize and leader selection
@@ -75,6 +81,18 @@ def poll():
         return {'status': 200}
     else:
         return {'status': 503}
+
+
+@app.route('/stop_receiving/', methods=['GET'])
+def stop_receiving():
+    agent_instance.stop_receiving_set()
+    return {'status': 200}
+
+
+@app.route('/resume_receiving/', methods=['GET'])
+def resume_receiving():
+    agent_instance.stop_receiving_reset()
+    return {'status': 200}
 
 
 @app.route('/leader_changed/', methods=['POST'])

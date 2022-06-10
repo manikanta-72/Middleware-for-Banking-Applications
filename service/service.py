@@ -37,12 +37,18 @@ class Service:
                         c = requests.post(client_api_call, data={'leader': self.current_leader})
 
     def node_recover(self, port):
+        # Halt leader from processing transactions
+        api_call = self.URL + ':' + str(self.current_leader) + '/stop_receiving/'
+        r = requests.get(api_call)
         print(port)
         api_call = self.URL + ':' + str(self.current_leader) + '/replication_log/'
         # get request to get latest replication log
-        r = requests.get(api_call, timeout=5)
+        r = requests.get(api_call)
         data = r.json()['data']
         if r.status_code == 200:
             # receive the file from leader and send to recovering node
             api_call = self.URL + ':' + str(port) + '/sync_log/'
             r = requests.post(api_call, json={'data': data})
+            # resume leader from processing transactions
+            api_call = self.URL + ':' + str(self.current_leader) + '/resume_receiving/'
+            r = requests.get(api_call)

@@ -7,10 +7,11 @@ import psycopg2
 from transaction_validator import TransactionValidator
 import threading
 
-NUMBER_OF_PARTICIPANTS = 2
-
+NUMBER_OF_PARTICIPANTS = 3
+agent_ports = [8000, 8001, 8002]
 
 class Agent:
+
     def __init__(self, url, port):
         self.transaction_queue = {'started': set(), 'Prepared': set(), 'Committed': set(), 'Completed': set()}
         self.validator = TransactionValidator()
@@ -21,6 +22,7 @@ class Agent:
         self.log_file_path = "recovery_log.txt"
         self.leader = False
         self.up = True
+        self.stop_receiving = False
         print("XYAZZZ")
         try:
             # initialise the database instance
@@ -228,14 +230,15 @@ class Agent:
         self.transaction_queue['Prepared'].add(transaction)
         # prepared received
 
-        for i in range(1, NUMBER_OF_PARTICIPANTS):
-            if not self.send_prepare_message(self.PORT + i, transaction):
-                log_message = "{}$$ABORT".format(transaction['transaction_id'])
-                self.write_log(log_message)
-                self.validator.unlock_resources(transaction)
-                self.transaction_queue['Prepared'].remove(transaction)
-                self.transaction_queue['Completed'].add(transaction)
-                return "ABORT"
+        for port in agent_ports:
+            if self.PORT != port:
+                if not self.send_prepare_message(port, transaction):
+                    log_message = "{}$$ABORT".format(transaction['transaction_id'])
+                    self.write_log(log_message)
+                    self.validator.unlock_resources(transaction)
+                    self.transaction_queue['Prepared'].remove(transaction)
+                    self.transaction_queue['Completed'].add(transaction)
+                    return "ABORT"
 
         log_message = "{}$$COMMIT".format(transaction['transaction_id'])
         self.write_log(log_message)
@@ -244,15 +247,15 @@ class Agent:
         self.transaction_queue['Commited'].add(transaction)
 
         # commit message to followers
-        for i in range(1, NUMBER_OF_PARTICIPANTS):
-            # This will not happen in our model
-            if not self.send_commit_message(self.PORT + i, transaction):
-                log_message = "{}$$ABORT".format(transaction['transaction_id'])
-                self.write_log(log_message)
-                self.validator.unlock_resources(transaction)
-                self.transaction_queue['Commited'].remove(transaction['transaction_id'])
-                self.transaction_queue['Completed'].add(transaction['transaction_id'])
-                return "ABORT"
+        for port in agent_ports:
+            if self.PORT != port:
+                if not self.send_commit_message(port, transaction):
+                    log_message = "{}$$ABORT".format(transaction['transaction_id'])
+                    self.write_log(log_message)
+                    self.validator.unlock_resources(transaction)
+                    self.transaction_queue['Commited'].remove(transaction['transaction_id'])
+                    self.transaction_queue['Completed'].add(transaction['transaction_id'])
+                    return "ABORT"
         # commit acknowledge
 
         for account_number, balance in transaction['write_set'].items():
@@ -333,3 +336,9 @@ class Agent:
         r = requests.get(url)
         print("Received:", r)
         self.up = True
+
+    def stop_receiving_set(self):
+        self.stop_receiving = True
+
+    def stop_receiving_reset(self):
+        self.stop_receiving = False
