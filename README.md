@@ -40,7 +40,7 @@ also need to change the database port and password in agent.py as per setup.sh
 while connecting to the postgres instance using "psycopg2.connect"
 
 #### Starting the components
-You can start the components by going to the agent's, client's and server's folder
+You can start the components by going to the agent's, client's and service(supervisor)'s folder
 and running "python app.py" (Make sure to run with python3). We recommend using
 an IDE like PyCharm for better experience.
 
@@ -59,7 +59,7 @@ Whenever we run a Xaction with write set, it should be replicated across all ser
 By default read-only transactions are enabled in all the replicas.
 
 In addtion to using the client, agents can be interacted with API. Note that
-all the messages between the agents, clients and server (Supervisor)
+all the messages between the agents, clients and service(Supervisor)
 is through HTTP requests/responses.
 
 For example: A read only transaction can be done using 
@@ -68,7 +68,7 @@ curl -X POST http://127.0.0.1:8000/read/ -H 'Content-Type: application/json' -d 
 ```
 #### Fail over testing
 The current leader can be brought down using `http://127.0.0.1:8000/down_leader/`(8000 is the port of current leader)  (Just run it in a browser)
-This triggers a failover and the Supervisor server chooses a new leader
+This triggers a failover and the Supervisor service chooses a new leader
 in a roundrobin method. Any ongoing transactions are temporarily paused to avoid
 any inconsistencies during the failover. Once the new leader is up, the client is 
 informed to communicate with the new leader for future transactions.
