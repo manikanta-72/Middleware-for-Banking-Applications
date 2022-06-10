@@ -201,7 +201,7 @@ class Agent:
 
         print("TMPXXX: ", transaction)
 
-        # validate the commit ?
+        # validate the commit
         # if self.validator.check_resource_availability(read_set, write_set):
         if not self.validator.check_resource_availability(transaction, 1):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
@@ -279,7 +279,6 @@ class Agent:
         return "COMMIT"
 
     def write_log(self, message):
-        # TODO decide on format to write the replication log
         with open(self.log_file_path, 'a+') as f:
             f.write(message + '\n')
 

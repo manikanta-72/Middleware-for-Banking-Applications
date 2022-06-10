@@ -46,7 +46,7 @@ class Service:
         r = requests.get(api_call)
         data = r.json()['data']
         if r.status_code == 200:
-            # receive the file from leader and send to recovering node
+            # receive the file from leader and send to the recovering node
             api_call = self.URL + ':' + str(port) + '/sync_log/'
             r = requests.post(api_call, json={'data': data})
             # resume leader from processing transactions

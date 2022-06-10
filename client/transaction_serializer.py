@@ -10,7 +10,6 @@ CLIENT_URL = ""
 
 def commit_transaction(tx: Transaction, current_leader) -> bool:
     # call the agent with write set
-    # TODO. Keep a timeout
 
     url = "http://127.0.0.1" + ':' + str(current_leader) + '/commit/'
     r = requests.post(url, json={
@@ -52,7 +51,6 @@ class TransactionSerializer:
         time_ns = time.time_ns()
         self.lock.release()
         tx.set_timestamp(time_ns)
-        # TODO call agent for reads. Add timeout
 
         url = "http://127.0.0.1" + ':' + str(current_leader) + '/read/'
         print("Agent URL: ", url)
