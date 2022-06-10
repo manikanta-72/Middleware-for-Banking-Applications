@@ -202,19 +202,13 @@ class Agent:
         print("TMPXXX: ", transaction)
 
         # validate the commit
-        # if self.validator.check_resource_availability(read_set, write_set):
         if not self.validator.check_resource_availability(transaction, 1):
             # 2 options a. keep it in pending queue b. abort the transaction altogether
-            # log_message = "{}$$ABORT".format(transaction['transaction_id'])
-            # self.write_log(log_message)
             print('availability abort')
             return "ABORT"
 
-        # if self.validator.validate_transactions(read_set, write_set, self.database):
         if not self.validator.validate_transactions(transaction, self.get_timestamp):
             # return abort message as there is a conflict with another client service
-            # log_message = "{}$$ABORT".format(transaction['transaction_id'])
-            # self.write_log(log_message)
             print('validation abort')
             return "ABORT"
 

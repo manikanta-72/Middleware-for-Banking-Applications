@@ -38,9 +38,6 @@ def read():
 @app.route('/commit/', methods=['POST'])
 def commit():
     json_data = request.get_json()
-    # write_set = json_data['write_set']
-    # read_set = json_data['read_set']
-    # read_time = json_data['read_time']
     transaction = json_data['transaction']
     # commit_status = agent_instance.commit_transaction(read_set, write_set, read_time)
     if agent_instance.leader and not agent_instance.stop_receiving:
