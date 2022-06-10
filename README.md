@@ -59,7 +59,7 @@ Whenever we run a Xaction with write set, it should be replicated across all ser
 By default read-only transactions are enabled in all the replicas.
 
 In addtion to using the client, agents can be interacted with API. Note that
-all the messages between the agents, clients and server (Transaction manager)
+all the messages between the agents, clients and server (Supervisor)
 is through HTTP requests/responses.
 
 For example: A read only transaction can be done using 
@@ -68,19 +68,19 @@ curl -X POST http://127.0.0.1:8000/read/ -H 'Content-Type: application/json' -d 
 ```
 #### Fail over testing
 The current leader can be brought down using `http://127.0.0.1:8000/down_leader/`(8000 is the port of current leader)  (Just run it in a browser)
-This triggers a failover and the Transaction manager server chooses a new leader
+This triggers a failover and the Supervisor server chooses a new leader
 in a roundrobin method. Any ongoing transactions are temporarily paused to avoid
 any inconsistencies during the failover. Once the new leader is up, the client is 
 informed to communicate with the new leader for future transactions.
 
 #### Recovery testing
 A failed node can be brought up using `http://127.0.0.1:8000/up_node/` (8000 is the port of failed node).
-The Transaction manager aborts ongoing transactions and temporarily stops future
+The supervisor aborts ongoing transactions and temporarily stops future
 transactions to avoid inconsistencies between the recovered node and other nodes.
 During recovery, the node fetches the missing transactions through the leader
 recovery log. It uses them to sync it database as well as its recovery log.
 Note that we keep both the recover_log.txt and the database in the same state.
-Once the node is recovered, the transaction manager resumes the transactions and the
+Once the node is recovered, the supervisor resumes the transactions and the
 recovered node is attached as a replica to the current leader.
 
 
